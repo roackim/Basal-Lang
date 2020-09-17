@@ -84,7 +84,7 @@ string getStringFromTokenType( TokenType type )
     {
         s = lexer::to_upper( s );
         if     ( s == "VAR" ) return VAR;
-        else if( s == "BIN" ) return BOOL;
+        else if( s == "BIN" ) return BIN;
         return TYPE_ERROR ;
     } 
 
@@ -95,8 +95,8 @@ string getStringFromTokenType( TokenType type )
         {
             case VAR:
                 return "var";
-            case BOOL:
-                return "bool";
+            case BIN:
+                return "bin";
             case UNDECLARED:
                 return "undeclared";
             case TYPE_ERROR:

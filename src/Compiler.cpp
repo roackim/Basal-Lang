@@ -130,10 +130,10 @@ namespace basal
         }
         else if( op=="OR" or op=="OU" or op=="AND" or op=="ET" or op=="." ) // bin operands expected
         {
-            if( type1 != BOOL or type2 != BOOL )
+            if( type1 != BIN or type2 != BIN )
                 throwCompileError( message );
         }
-        else if( op=="+" )
+        else if( op=="+" or op=="=")
         {
             if( type1 != type2 )
             {
@@ -154,7 +154,7 @@ namespace basal
 
         if( op=="NOT" or op=="NON" or op=="!" )
         {
-            if( type1 != BOOL )
+            if( type1 != BIN )
                 throwCompileError( message );
         } 
     }
@@ -338,7 +338,7 @@ namespace basal
 
         if( current.type == RELOP )
         {
-            type = BOOL;
+            type = BIN;
             program << "    pop  ax" << endl;
             program << ":CMP_" << tagNumber << endl;
 
@@ -461,7 +461,7 @@ namespace basal
                 program << "    push 0" << endl;
 
             readToken();
-            return BOOL;
+            return BIN;
         }
         else if( current.type == NOT )
         {
@@ -586,9 +586,31 @@ namespace basal
         // we can assume the varaible has been declared
 
         readToken();
+        unsigned old = j;
         if( current.text == "=" ) readToken();
         
         Type exprType = parseExpression();
+        
+        if( var.type == BIN and exprType == VAR )
+        {
+            tagNumber++;
+            program << "# converting var to bin" << endl;
+            program << ":VAR_TO_BIN_" << tagNumber << endl;
+            program << "    cmp 0, (sp)" << endl;
+            program << "    jump VAR_TO_BIN_" << tagNumber << "_END if EQU" << endl;
+            program << "    cmp 1, (sp)" << endl;
+            program << "    jump VAR_TO_BIN_" << tagNumber << "_END if EQU" << endl;
+            program << "    copy 1, (sp)" << endl;
+            program << ":VAR_TO_BIN_" << tagNumber << "_END" << endl;
+
+        } 
+        else
+        {
+            unsigned curr = j;
+            j = old;
+            checkOperandTypes( "=", var.type, exprType );
+            j = curr;
+        }
 
         // [ code gen ]
 
@@ -600,14 +622,30 @@ namespace basal
 
     }
 
+    // IfStatement := "IF" <bool>Expression "THEN" ENDL Statement {"ELSE" IfStatement } ["ELSE" "THEN" ENDL Statement] "END"
+    void Compiler::parseIfStatement( void )
+    {
+        readToken(); // read IF keyword
+
+        Type exprType = parseExpression();
+        if( exprType != BIN )
+        {
+            string mess = "Cannot use an expression of type '" + basal::getStringFromType( exprType ) + "' as a condition" ;
+            if( frenchEnabled ) mess = "Impossible d'utiliser une expression de type '" + basal::getStringFromType( exprType ) + "' en tant que condition" ;
+            throwCompileError( mess );
+        }
+
+    }
+
     // redirect to the corresponding function depending on the first token
     bool Compiler::dispatchFunctionCall( void )
     {
-
+        string word = lexer::to_upper( current.text );
         if( current.type == TYPE ) parseVarDeclaration();
         else if( current.type == IDENTIFIER ) parseAssignement();
         else if( current.type == STOP ) return false;
         else if( current.type == ENDL ) return true;
+        else if( word == "IF" or word == "SI" ) parseIfStatement();
         else
         {
             string mess = "Unrecognized instruction";

@@ -42,7 +42,7 @@ namespace basal
     enum Type   // basal types // TODO add more types ?
     {
         VAR,
-        BOOL,
+        BIN,
         UNDECLARED,
         TYPE_ERROR
     };
