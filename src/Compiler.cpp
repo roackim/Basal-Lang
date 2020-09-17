@@ -28,7 +28,7 @@ namespace basal
 
         current = tokens[j];
 
-        while( dispatchFunctionCall() ){ readEndl(); }
+        while( parseStatement() ){ readEndl(); }
         
     }
 
@@ -627,6 +627,11 @@ namespace basal
     {
         readToken(); // read IF keyword
 
+        unsigned tag = ++tagNumber;
+        unsigned subIFS = 0;
+        program << "# If Statement" << endl;
+        program << ":IF_" << tag << "_" << ++subIFS << endl;
+
         Type exprType = parseExpression();
         if( exprType != BIN )
         {
@@ -634,11 +639,118 @@ namespace basal
             if( frenchEnabled ) mess = "Impossible d'utiliser une expression de type '" + basal::getStringFromType( exprType ) + "' en tant que condition" ;
             throwCompileError( mess );
         }
+        string word = lexer::to_upper(current.text);
+        if( word != "ALORS" and word != "THEN" )
+        {
+            string mess = "Keyword 'THEN' expected after condition" ;
+            if( frenchEnabled ) mess = "Mot clef 'ALORS' attendu après condition" ;
+            throwCompileError( mess ); 
+        }
+
+        readToken(); // read THEN
+        readEndl();
+
+        // TODO SCOPE
+
+        program << "    pop ax" << endl;
+        program << "    cmp 0, ax" << endl;
+        program << "    jump IF_" << tag << "_" << subIFS << "_END if EQU" << endl; // skip body if false
+
+        word = lexer::to_upper( current.text );
+        while( word != "END" and word != "FIN" and word != "ELSE" and word != "SINON" )
+        {
+            parseStatement();
+            readEndl();
+
+            word = lexer::to_upper( current.text );
+        }
+
+        program << "    jump IF_" << tag << "_END" << endl; // body has been executed
+        program << ":IF_" << tag << "_" << subIFS << "_END" << endl;
+
+        word = lexer::to_upper( current.text );
+        while( word == "ELSE" or word == "SINON" ) // enter sub if ( ELSE IF )
+        {
+            readToken();
+
+            word = lexer::to_upper( current.text );
+            if( word == "IF" or word == "SI" ) // Else If 
+            {
+                readToken();
+                program << ":IF_" << tag << "_" << ++subIFS << endl;
+
+                Type SubIfExprType = parseExpression();
+                if( SubIfExprType != BIN )
+                {
+                    string mess = "Cannot use an expression of type '" + basal::getStringFromType( exprType ) + "' as a condition" ;
+                    if( frenchEnabled ) mess = "Impossible d'utiliser une expression de type '" + basal::getStringFromType( exprType ) + "' en tant que condition" ;
+                    throwCompileError( mess );
+                }
+                word = lexer::to_upper(current.text);
+                if( word != "ALORS" and word != "THEN" )
+                {
+                    string mess = "Keyword 'THEN' expected after condition" ;
+                    if( frenchEnabled ) mess = "Mot clef 'ALORS' attendu après condition" ;
+                    throwCompileError( mess ); 
+                }
+
+                readToken();    // read THEN
+                readEndl();     // read end of line
+
+                program << "# ELSE IF" << endl;
+                program << "    pop ax" << endl;
+                program << "    cmp 0, ax" << endl;
+                program << "    jump IF_" << tag << "_" << ++subIFS << "_END if EQU" << endl; // skip body if false
+
+                word = lexer::to_upper( current.text );
+                while( word != "END" and word != "FIN" and word != "ELSE" and word != "SINON" )
+                {
+                    parseStatement();
+                    readEndl();
+
+                    word = lexer::to_upper( current.text );
+                }
+
+                program << "    jump IF_" << tag << "_END" << endl; // body has been executed
+                program << ":IF_" << tag << "_" << subIFS << "_END" << endl;
+            }
+            else if( word == "THEN" or word == "ALORS" )
+            {
+                readToken(); // read THEN
+                readEndl();
+
+                program << "# ELSE " << endl;
+
+                word = lexer::to_upper( current.text );
+                while( word != "END" and word != "FIN" )
+                {
+                    parseStatement();
+                    readEndl();
+
+                    word = lexer::to_upper( current.text );
+                }
+                break; // avoid having else if after an else
+            }
+            word = lexer::to_upper( current.text );
+        }
+
+        word = lexer::to_upper( current.text );
+        if( word == "END" or word == "FIN" ) readToken();
+        else
+        {
+            string mess = "Keyword 'END' expected after IF statement" ;
+            if( frenchEnabled ) mess = "Mot clef 'ALORS' attendu après bloc SI" ;
+            throwCompileError( mess ); 
+        }
+
+        program << ":IF_" << tag << "_END" << endl;
+
+        
 
     }
 
     // redirect to the corresponding function depending on the first token
-    bool Compiler::dispatchFunctionCall( void )
+    bool Compiler::parseStatement( void )
     {
         string word = lexer::to_upper( current.text );
         if( current.type == TYPE ) parseVarDeclaration();

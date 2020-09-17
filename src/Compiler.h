@@ -105,7 +105,7 @@ namespace basal   // keep things contained in a namespace.  basm = Basal Assembl
         // IfStatement := "IF" <bool>Expression "THEN" ENDL Statement {"ELSE" IfStatement } ["ELSE" "THEN" ENDL Statement] "END"
         void parseIfStatement( void );
 
-        bool dispatchFunctionCall( void );
+        bool parseStatement( void );
 
     };
 }
