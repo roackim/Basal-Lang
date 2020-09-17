@@ -45,7 +45,7 @@ int main( int argc, char *argv[] )
             cout << endl;
         }
         else
-            cout << basal::getTokenTypeStr( compiler.tokens[i].type ) << " ";
+            cout << basal::getTokenTypeStr( compiler.tokens[i].type ) << " \'" << compiler.tokens[i].text << "\' " << endl;
     }
 
 

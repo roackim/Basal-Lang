@@ -36,13 +36,16 @@ namespace lexer
     bool matchCharValue( const string& s );
     bool matchIdentifier( const string& s );
 
+    // Helper functions for splitLine function
+    void endWord( vector<string>& words, string& word ); // push word if not empty
+    bool isEscaped( const string& line, const uint32_t& i );
+    bool matchOneLetterOP( char op );
+
     // split a string with a delimiter 
     vector<string> splitLine( string line );
     token tokenizeOneWord( string txt );
 
-    // Helper functions for splitLine function
-    void endWord( vector<string>& words, string& word ); // push word if not empty
-    bool isEscaped( const string& line, const uint32_t& i );
+
 }
 
 

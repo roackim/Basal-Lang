@@ -53,6 +53,8 @@ namespace basal
             case 17:
                 return "end of file";
             case 18:
+                return "string";
+            case 19:
                 return "unkown";
             default:
                 return "unkown bis";

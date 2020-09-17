@@ -42,6 +42,7 @@ namespace lexer
              or op=="+"  or op=="-" or op=="/"   or op=="*"   or op=="^"  or op=="%" );
     }
 
+
     // return true if the string is a basal keyword
     bool matchKEYWORD( string op )
     {
@@ -169,6 +170,13 @@ namespace lexer
     {
         return( i > 0 and line[i-1] == '\\');
     }
+    
+    // helper function for splitline
+    bool matchOneLetterOP( char op )
+    {
+        return( op=='='  or op=='<'   or op=='>' or op=='>' or op=='<' or op=='!' 
+             or op=='+'  or op=='-' or op=='/'   or op=='*'   or op=='^'  or op=='%' );
+    }
 
     // split a string into words, stored in a vector
     vector<string> splitLine( string line )
@@ -212,7 +220,8 @@ namespace lexer
                     word += line[i];
                     endWord( words, word );
                 }
-                else word += line[i];
+                else 
+                    word += line[i];
                 continue;
             }
             else if( line[i] == '#') // discard the rest of the line if the char is not escaped
@@ -234,22 +243,50 @@ namespace lexer
                     Esc = false;
                 } 
             }
-            else Esc = false;
-            // default
-            word += line[i];
+            else if( matchOneLetterOP( c ) and not quotes)
+            {
+                endWord( words, word );
+                if( line[i+1] == '=' )
+                {
+                    word += line[i];
+                    string s{ c }; s += line[i+1];
+                    if( matchOP( s ))
+                    {
+                        i++;
+                        word += line[i];
+                        endWord( words, word );
+                        continue;
+                    }
+                    continue;
+                }
+                else
+                {
+                    word += line[i];
+                    endWord( words, word );
+                    continue;
+                }
+            }
+            else // default case
+            { 
+                Esc = false;
+                word += line[i];
+                continue;
+            }
         }
-        endWord( words, word);
+        endWord( words, word );
         word += "#"; // end of line token, use '#' char, so ';' can be used as a separator, not incrementing line count
-        endWord( words, word);
+        endWord( words, word );
         
         return words;
     }
 
     token tokenizeOneWord( string txt )
     {
+        static bool quotes = false;
         using namespace basal;
         TokenType type = UNKNOWN;
         if     ( txt == "," ) type = COMMA;
+        else if( txt == "\""){ type = QUOTES; quotes = not quotes; }
         else if( txt == ";" or txt == "#" ) type = ENDL;
         else if( txt == "&" ) type = AMPERSAND;
         else if( txt == "(" ) type = LPAREN;
@@ -266,6 +303,7 @@ namespace lexer
         else if( matchHexaValue( txt ))     type = HEXA_VALUE;      // try to match hexa values
         else if( matchBinValue( txt ))      type = BINARY_VALUE;    // try to match binary values
         else if( matchIdentifier( txt))     type = IDENTIFIER;      // try to match label call ex: jump Hello_World_Proc
+        else if( quotes ) type = STRING;
 
         token ret( txt, type );
         return( ret ); 

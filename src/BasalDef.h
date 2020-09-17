@@ -29,6 +29,7 @@ namespace basal
         BINARY_VALUE,       //  |
         ENDL,
         STOP,
+        STRING,
         UNKNOWN
     };
 
