@@ -12,60 +12,79 @@
 	AssignementStatement := Identifier "=" Expression
 	Identifier := Letter {(Letter|Digit|_)}
     
-    DeclarationStatement := (var|bin) Identifier ["=" Expression]
-
+    DeclarationStatement := ("var"|"bin") Identifier ["=" Expression]
 
     Expression := SimpleExpression [RelationalOperator SimpleExpression]
+    
 	SimpleExpression := Term {AdditiveOperator Term}
 	Term := Factor {MultiplicativeOperator Factor}
-	Factor := Number | Identifier | "(" Expression ")"| ReservedFunction	
-    Number := (\-)?{digit}+|True|False|(\-)?{digit}+\.{digit}+
-	Identifier := Letter { (Letter|Digit) }
+	Factor := Number | Identifier | "(" Expression ")"
 
-	AdditiveOperator := "+" | "-" | "OR"
-	MultiplicativeOperator := "*" | "/" | "%" | "AND"
+	Identifier := Letter { (Letter|Digit|"_") }
+
+	AdditiveOperator := "+" | "-" | "OR"                            // depend on priority
+	MultiplicativeOperator := "*" | "/" | "%" | "AND"               // same
 	RelationalOperator := "==" | "!=" | "<" | ">" | "<=" | ">="
-	Digit := "0"|"1"|"2"|"3"|"4"|"5"|"6"|"7"|"8"|"9"
+	Digit  := "0"|"1"|"2"|"3"|"4"|"5"|"6"|"7"|"8"|"9"
+    Number := ("-")?{digit}+|"True"|"False"
 	Letter := "a"|...|"z"
 
 
 
-## Old Basal Grammar
 
-	Program := [DeclarationPart] StatementPart
-	DeclarationPart := "VAR" { DeclarationSubPart }
-	DeclarationSubPart := Type ":" ID { "," ID } ";"
-	Type = BOOL|INT|FLOAT
-	
-	StatementPart := "START" { Statement } "STOP"
-	Statement := IfStatement 
-	           | WhileStatement 
-	           | ForStatement 
-	           | BlockStatement 
-	           | ReservedFunction ";" 
-	           | AssignementStatement ";"
-	
-	ReservedFunction := CallDISP | CallABS | CallSIN | CallCOS | CallSQRT | CallCHOP | CallROUND
-	AssignementStatement := Identifier ":=" Expression
 
-	IfStatement := "IF" Expr "THEN" Statement { "ELSIF" Expr "THEN" Statement } [ "ELSE" Statement ]
-	WhileStatement := "WHILE" Expr "DO" Statement
-	ForStatement := "FOR" assignementStatement "TO" expr2 "DO" Statement
-	BlockStatement := "BEGIN" { Statement } "END"
-	
-	DispCall := "DISP" "(" Expr {"," expr} ")"
-	
-	Expr := SimpleExpression [RelationalOperator SimpleExpression]
-	SimpleExpression := Term {AdditiveOperator Term}
-	Term := Factor {MultiplicativeOperator Factor}
-	Factor := Number | Identifier | "(" Expression ")"| ReservedFunction | StringConst
-	
-	StringConst := \"[A-Za-z0-9 \\\(\)\<\>\=\!\%\&\|\}\-\:\;\.]*\"
-	Number := (\-)?{digit}+|True|False|(\-)?{digit}+\.{digit}+
-	Identifier := Letter { (Letter|Digit) }
+var cpt = 0
+bin res = False
 
-	AdditiveOperator := "+" | "-" | "OR"
-	MultiplicativeOperator := "*" | "/" | "%" | "AND"
-	RelationalOperator := "==" | "!=" | "<" | ">" | "<=" | ">="
-	Digit := "0"|"1"|"2"|"3"|"4"|"5"|"6"|"7"|"8"|"9"
-	Letter := "a"|...|"z"
+FOR var i = 0 TO 10 
+    cpt = cpt + 1       # increment cpt
+    disp( cpt )
+END
+
+
+// from pascal :
+
+procedures: do not return a value
+functions : return a single value 
+
+
+PROC SQUARE var a, b 
+    IF a < b THEN
+        RETURN a*a
+    ELSE
+        RETURN b*b 
+    END
+END
+
+
+FUNC SQUARE var a, b RET var
+START
+    IF a < b THEN
+        RETURN a*a
+    ELSE
+        RETURN b*b 
+    END
+STOP
+
+Label_test:
+
+
+GOTO Label_test
+
+
+int     
+float   
+bin     
+
+
+
+func isbigger( a, b ): bin
+    if( a > b ) return True;
+    else return False;
+    end
+end
+
+
+
+
+var b = SQUARE 4, 5
