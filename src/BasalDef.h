@@ -16,7 +16,7 @@ namespace basal
         MULOP,              // multiplicative operator 
         RELOP,              // relationnal operator
         KEYWORD,            // keyword
-        RESERVED,           // reserved functions
+        RESERVED_FUNC,           // reserved functions
         QUOTES,
         COMMA,
         AMPERSAND,
@@ -33,20 +33,30 @@ namespace basal
         STOP,
         STRING,
         SPACES,
+        TYPE,
+        RESERVED_VALUE,
         UNKNOWN
     };
     enum Type   // basal types // TODO add more types ?
     {
         INT,
-        BIN
+        BIN,
+        ERROR
     };
 
     // helper function, allow to get string from enum
     string getTokenTypeStr( TokenType type );
+
+    // return the corresponding basal Type
+    Type getTypeFromString( string s );
+
+    // return the corresponding string from basal Type
+    string getStringFromType( basal::Type type );
 }
 
 namespace lexer
 {
+    
     class token // contains the type and the text 
     {
     public:

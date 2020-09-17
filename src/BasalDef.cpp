@@ -1,4 +1,5 @@
 #include "BasalDef.h"
+#include "lexer.h"
 
 #include <string>
 #include <iostream>
@@ -61,11 +62,40 @@ namespace basal
             case 21:
                 return "spaces";
             case 22:
+                return "type";
+            case 23:
+                return "reserved_value";
+            case 24:
                 return "unkown";
             default:
                 return "unkown_bis";
         }
         return "ERROR";
+    }
+
+    // return the corresponding basal Type
+    Type getTypeFromString( string s )
+    {
+        s = lexer::to_upper( s );
+        if( s == "INT" ) return INT;
+        else if( s == "BIN" ) return BIN;
+        return ERROR;
+    } 
+
+    // return the corresponding string from basal Type
+    string getStringFromType( basal::Type type )
+    {
+        switch( type )
+        {
+            case INT:
+                return "int";
+            case BIN:
+                return "bin";
+            case ERROR:
+                return "error";
+            default:
+                return "WTF";
+        }
     }
 
 }

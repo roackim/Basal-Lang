@@ -29,8 +29,15 @@ namespace lexer
     // return true if the string is a basal keyword
     bool matchKEYWORD( string op );
 
+    // return true if the string is a basal type
+    bool matchTYPE( string op );
+
     // return true if the string is a basal reserved function
-    bool matchRESERVED( string op );
+    bool matchRESERVED_FUNC( string op );
+
+    // return true if strign literal for boolean
+    bool matchRESERVED_VALUE( string op );
+
 
     // helpers functions used to replaced regex, because of terrible performance (i dont know why std::regex was so slow, i put in parser.cpp/h the code that replace the regex)
     bool isSpace( const char& c );

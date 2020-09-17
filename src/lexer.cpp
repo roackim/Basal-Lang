@@ -65,16 +65,30 @@ namespace lexer
     // return true if the string is a basal keyword
     bool matchKEYWORD( string op )
     {
-        return( op=="var" or op=="bin" or op=="array" or op=="tableau" or op=="FUNCTION" or op=="FONCTION" or op=="RETURN" 
+        return( op=="FUNCTION" or op=="FONCTION" or op=="RETURN" 
              or op=="RENVOYER" or op=="END" or op=="FIN" or op=="IF" or op=="SI" or op=="THEN" or op=="ALORS"  or op=="ELSE" or op=="SINON"
              or op=="FOR" or op=="POUR" or op=="UNTIL" or op=="JUSQUA" or op=="DO" or op=="FAIRE" or op=="WHILE" or op == "TANTQUE" );
     }
 
+    // return true if the string is a basal type
+    bool matchTYPE( string op )
+    {
+        op = to_upper( op );
+        return( op=="INT" or op=="BIN" or op=="ARRAY" or op=="TABLEAU" );
+    }
+
     // return true if the string is a basal reserved function
-    bool matchRESERVED( string op )
+    bool matchRESERVED_FUNC( string op )
     {
         op = to_upper( op ); // non case sensitive op 
         return( op=="DISP" or op=="AFFICHER" );  
+    }
+
+    // return true if strign literal for boolean
+    bool matchRESERVED_VALUE( string op )
+    {
+        op = to_upper( op );
+        return( op=="FALSE" or op=="TRUE" or op=="VRAI" or op=="FAUX" );
     }
 
 
@@ -317,18 +331,19 @@ namespace lexer
         else if( txt == "]" ) type = RBRACKET;
         else if( txt == "{" ) type = LBRACES;
         else if( txt == "}" ) type = RBRACES;
-        else if( txt == "var" or txt == "bin" or txt == "array" or txt == "tableau" ) type = KEYWORD;         // try to display types 
-        else if( matchRELOP( txt ))         type = RELOP;           // try to match relationnal operators
-        else if( matchADDOP( txt ))         type = ADDOP;           // try to match additive operators
-        else if( matchMULOP( txt ))         type = MULOP;           // try to match additive operators
-        else if( matchRESERVED( txt ))      type = RESERVED;        // try to match reserved functions
-        else if( matchKEYWORD( txt ))       type = KEYWORD;         // try to match basal keywords
-        else if( matchDecimalValue( txt ))  type = DECIMAL_VALUE;   // try to match decimal values
-        else if( matchHexaValue( txt ))     type = HEXA_VALUE;      // try to match hexa values
-        else if( matchBinValue( txt ))      type = BINARY_VALUE;    // try to match binary values
-        else if( matchIdentifier( txt))     type = IDENTIFIER;      // try to match label call ex: jump Hello_World_Proc
-        else if( quotes )                   type = STRING;
-        else if( isSpace( txt[0] ))         type = SPACES;
+        else if( matchRELOP( txt ))             type = RELOP;           // try to match relationnal operators
+        else if( matchADDOP( txt ))             type = ADDOP;           // try to match additive operators
+        else if( matchMULOP( txt ))             type = MULOP;           // try to match additive operators
+        else if( matchRESERVED_FUNC( txt ))     type = RESERVED_FUNC;   // try to match reserved functions
+        else if( matchRESERVED_VALUE( txt ))    type = RESERVED_VALUE;  // try to match reserved functions
+        else if( matchTYPE( txt ))              type = TYPE;            // try to match basal type declaration
+        else if( matchKEYWORD( txt ))           type = KEYWORD;         // try to match basal keywords
+        else if( matchDecimalValue( txt ))      type = DECIMAL_VALUE;   // try to match decimal values
+        else if( matchHexaValue( txt ))         type = HEXA_VALUE;      // try to match hexa values
+        else if( matchBinValue( txt ))          type = BINARY_VALUE;    // try to match binary values
+        else if( matchIdentifier( txt))         type = IDENTIFIER;      // try to match label call ex: jump Hello_World_Proc
+        else if( quotes )                       type = STRING;
+        else if( isSpace( txt[0] ))             type = SPACES;
 
         token ret( txt, type );
         return( ret ); 

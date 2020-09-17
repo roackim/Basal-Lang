@@ -32,16 +32,17 @@ namespace basal   // keep things contained in a namespace.  basm = Basal Assembl
         vector<token> tokens;                   // store all tokens
         stringstream program;                   // contains basm program
         unsigned j = 0;                         // used to count tokens
+        bool frenchEnabled = false;         // switch error messages to french
     private:
 
         Scope* scope = nullptr;                 // current scope
-        unsigned lineNbr = 0;                   // one empty line is always artifially added at the begining
+        unsigned lineNbr = 1;                   // one empty line is always artifially added at the begining
         map<string, uint16_t> variables;    // store addresses of labels
         unsigned stackPointer = 0;
         token current;                      // used as current token
         string fileName;                    // store source file name
 
-        bool frenchEnabled = false;         // switch error messages to french
+
         unsigned tagNumber = 0;             // used to differenciate labels generation
 
     public:
@@ -91,6 +92,11 @@ namespace basal   // keep things contained in a namespace.  basm = Basal Assembl
 
         // Factor := number | identifier | "(" Expression ")"
         Type parseFactor( void );
+
+        // VarDeclaration := type identifier [ "=" Expression ]
+        void parseVarDeclaration( void );
+
+        bool dispatchFunctionCall( void );
 
     };
 }

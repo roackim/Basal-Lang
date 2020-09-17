@@ -32,13 +32,24 @@ int main( int argc, char *argv[] )
     // Instanciate Assambler, assemble instructions
     basal::Compiler compiler;
 
+    string out = "out.basm";
+    if( argc > 3 ) // output
+    {
+        string s{ argv[2] };
+        if( s == "-o" )
+            out = argv[3];
+        string f{ argv[4] };
+        if( f == "-french" )
+            compiler.frenchEnabled = true;
+    }
+
+
     try // try to compile
     { 
         compiler.compile( file );
-    } catch( const std::exception& e )
+    } catch( ... )
     {
-        cerr << "An Error has occured during compilation" << endl;
-        return 0;
+        cout << "-------------" << endl;
     }
 
     // end chrono
@@ -47,13 +58,8 @@ int main( int argc, char *argv[] )
     if( DISP_TIME ) 
         cout << "Compiled  in " << elapsed.count() << " ms" << endl;
 
-    string out = "out.basm";
-    if( argc > 3 ) // output
-    {
-        string f{ argv[2] };
-        if( f == "-o" )
-            out = argv[3];
-    }
+
+
 
     std::ofstream outfile( out );
     outfile << ":Program" << endl;
@@ -62,16 +68,17 @@ int main( int argc, char *argv[] )
     outfile << "    EXIT" << endl;
     outfile.close(); 
 
-    // cout << "Program:" << endl << compiler.program.str() << endl;
-    // for( uint32_t i=0; i<compiler.tokens.size(); i++)
-    // {
-    //     if( compiler.tokens[i].type == basal::ENDL )
-    //     {
-    //         cout << endl;
-    //     }
-    //         cout << compiler.tokens[i].text << "|";
-    //         cout << basal::getTokenTypeStr( compiler.tokens[i].type ) << ", ";
-    // }
+    cout << "Program:" << endl << compiler.program.str() << endl;
+    for( uint32_t i=0; i<compiler.tokens.size(); i++)
+    {
+        if( compiler.tokens[i].type == basal::ENDL )
+        {
+            cout << endl;
+        }
+            cout << compiler.tokens[i].text << "|";
+            cout << basal::getTokenTypeStr( compiler.tokens[i].type ) << ", ";
+    }
+    cout << endl;
 
 
     return 0;

@@ -26,14 +26,10 @@ namespace basal
             return; // stop compilation
         }
 
+        current = tokens[j];
 
-        if( !tokens.empty() ) //  TODO change
-        {
-            current = tokens[j];
-            while( current.type == ENDL ) readToken();
-
-            parseExpression(); // parse an expression
-        }
+        while( dispatchFunctionCall() ){ readEndl(); }
+        
     }
 
     // throw and output a comprehensible error message, throw a runtime_error
@@ -46,51 +42,62 @@ namespace basal
         i = j - i; // get diff
 
         // get the actual line
-        char line[120];    // char * used to store line
+        char line[120];             // char * used to store line
         std::ifstream rfile;    
-        rfile.open( fileName );    // Open file
+        rfile.open( fileName );     // Open file
         if( rfile.is_open())
         {
             for( unsigned x=0; x<lineNbr; x++)
             {
-                rfile.getline( line, 120 );    // tokenize whole line for every lines
+                rfile.getline( line, 120 );  
             }
+            rfile.close();
+        }
+        else // File hasn't been opened
+        {
+            rfile.close();
+            string message = "Cannot open file '" + fileName + "'" ;
+            if( frenchEnabled ) message = "Impossible d'ouvrir le fichier '" + fileName + "'" ;
+            throwSimpleError( message );
         }
         // find where is the current token
-        vector<string> tkns = lexer::splitLine( line );
-        unsigned cpt = 0;   // used to count real tokens
-        unsigned a = 0;     // iterate
-        string mess = "";   // will contains the source code of the line and an indicator of where the error is
-        while( cpt != i )
+        vector<string> tkns = lexer::splitLine( line, true );
+
+        string source = "";
+        string helper = "\n    ";
+
+        unsigned a=0;
+        while( lexer::isSpace( tkns[0][0] )) a++;
+        // reconstruct current line
+        while( not( tkns[a] == "#" or tkns[a] == ";") )
         {
-            if( cpt != 0 or not lexer::isSpace( tkns[a][0])) mess += tkns[a]; // reconstruct mess without first spaces
-            if( not lexer::isSpace( tkns[a][0]) ) cpt++;  // dont count spaces as real tokens
+            source += tkns[a]; // reconstruct mess without first spaces
+            char c = ' ';
+            if( i == 1 ) 
+            {
+                if( not lexer::isSpace( tkns[a][0] )) c = '^';
+            }
+            cout << tkns[a] << ", " << i << endl;
+            for( unsigned x=0; x<tkns[a].length(); x++ )
+            { 
+                helper += c; 
+            }
+            if( not lexer::isSpace( tkns[a][0]) ) 
+            {   
+                if( i != 0 ) i--;  // dont count spaces as real tokens
+            }
             a++;
         }
 
-        // reconstruct current line
-        a = mess.length();
-        // add error indicator under  ex :       var a = 134 < aasdasd
-        //                                                        ^
-        mess += "\n";
-        for( unsigned x=a; a>0; a-- )
-        {
-            mess += " ";
-        }
-        // display a '^' just under the token which prompted the compile error
-        unsigned mid = ( current.text.length() + current.text.length() % 2 ) / 2; // get word's middle char index
-        for( unsigned x=current.text.length(); x>0; x-- )
-        {
-            if( x != mid ) mess += " ";
-            else if( x == mid ) mess += "^";
-        }
+        source += helper;
 
+        cerr << endl;
         if( frenchEnabled )
             std::cerr << "Erreur de compilation, ligne ";
         else if( not frenchEnabled )
             std::cerr << "Compile error, line "; 
 
-        std::cerr << lineNbr << "\n -> " << error_message << "\n    " << mess << std::endl;
+        std::cerr << lineNbr << "\n -> " << error_message << "." << "\n\n    " << source << std::endl;
         throw std::runtime_error( error_message );
     }
 
@@ -180,13 +187,15 @@ namespace basal
     {
         if( current.type == ENDL )
         {
-            readToken();
             if( current.text == "#" ) lineNbr++; // do not increment line Nbr if used ';' to separate 2 instructions
+            readToken();
             return true;
         }
         else
         {
-            throwCompileError("Expected End of line after instruction");
+            string mess = "Expected End of line after instruction";
+            if( frenchEnabled ) mess = "Retour a la ligne attendu apres une instruction";
+            throwCompileError( mess );
             return false;
         }
     }
@@ -288,7 +297,6 @@ namespace basal
             string message = "Cannot open file '" + fileName + "'" ;
             if( frenchEnabled ) message = "Impossible d'ouvrir le fichier '" + fileName + "'" ;
             throwSimpleError( message );
-
         }
         rfile.close();
         token last_token("STOP", STOP); 
@@ -300,9 +308,7 @@ namespace basal
     // Expression := SimpleExpression [ RelationalOperator SimpleExpression ]
     Type Compiler::parseExpression( void )
     {
-        Type type = INT;
-
-        parseSimpleExpression();
+        Type type = parseSimpleExpression();
 
         if( current.type == RELOP )
         {
@@ -420,6 +426,17 @@ namespace basal
             type = INT;
 
         } 
+        else if( current.type == RESERVED_VALUE )
+        {
+            type = BIN;
+            string s = lexer::to_upper( current.text );
+            if( s == "TRUE" or s == "VRAI" )
+                program << "    push 1" << endl;
+            else if( s == "FALSE" or s == "FAUX" )
+                program << "    push 0" << endl;
+
+            readToken();
+        }
         else if( current.type == IDENTIFIER ) // not a declaration, identifier is used as a variable
         {
             throwCompileError("Identifiers are not implemented yet");
@@ -474,6 +491,72 @@ namespace basal
         return type;
     }
 
+    // VarDeclaration := type identifier [ "=" Expression ]
+    void Compiler::parseVarDeclaration( void )
+    {
+        if( current.type != TYPE ) // expect a type 
+        {
+            string mess = "Expected a type";
+            if( frenchEnabled ) mess = "Type attendu";
+            throwCompileError( mess );
+        }
+
+        Type varType = basal::getTypeFromString( current.text );
+        readToken(); // read type
+
+        if( current.type != IDENTIFIER ) // expect an identifier
+        {
+            string mess = "Indentifier expected";
+            if( frenchEnabled ) mess = "Identifiant attendu";
+            throwCompileError( mess );
+        }
+        // check if the variable has already been declared
+        string varName = current.text;
+        if( scope->isDeclared( varName ))
+        {
+            string mess = "The variable '" + varName + "' already exists";
+            if( frenchEnabled ) mess = "La variable '" + varName + "' existe déjà";
+            throwCompileError( mess );
+        }
+
+        scope->declareVar( varName, varType );
+        readToken(); // read identifier
+
+        if( current.text == "=" ) // assign after declaration
+        {
+            readToken(); // read '=' token
+            Type exprType = parseExpression();
+
+            if( exprType != varType )
+            {
+                string mess = "Cannot assign a " + basal::getStringFromType( exprType ) 
+                    + " expression to a " + basal::getStringFromType( varType ) + " variable"  ;
+                if( frenchEnabled ) mess = "Impossible d'assigner une expression de type " + basal::getStringFromType( exprType ) 
+                    + " à une variable de type " + basal::getStringFromType( varType ) ;
+                throwCompileError( mess );
+            } 
+        }
+    }
+
+    // redirect to the corresponding function depending on the first token
+    bool Compiler::dispatchFunctionCall( void )
+    {
+
+        if( current.type == TYPE )
+        { 
+            parseVarDeclaration();
+        }
+        else if( current.type == STOP ) return false;
+        else if( current.type == ENDL ) return true;
+        else
+        {
+            cout << lineNbr << " " << getTokenTypeStr( current.type ) << ": " << current.text << endl;
+            string mess = "Unrecognized instruction";
+            if( frenchEnabled ) mess = "Instruction inconnue";
+            throwCompileError( mess );
+        }
+        return true;
+    }
 
 }
 
