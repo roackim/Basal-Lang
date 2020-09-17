@@ -21,40 +21,44 @@ namespace basal
             case 1:
                 return "op";
             case 2:
-                return "keyword";
+                return "relationnal_operator";
             case 3:
-                return "reserved_identifier";
+                return "keyword";
             case 4:
-                return "quotes";
+                return "reserved_identifier";
             case 5:
-                return "comma";
+                return "quotes";
             case 6:
-                return "ampersand";
+                return "comma";
             case 7:
-                return "lparen";
+                return "ampersand";
             case 8:
-                return "rparen";
+                return "lparen";
             case 9:
-                return "lbracket";
+                return "rparen";
             case 10:
-                return "rbracket";
+                return "lbracket";
             case 11:
-                return "lbraces";
+                return "rbracket";
             case 12:
-                return "rbraces";
+                return "lbraces";
             case 13:
-                return "decimal_value";
+                return "rbraces";
             case 14:
-                return "hexa_value";
+                return "decimal_value";
             case 15:
-                return "binary_value";
+                return "hexa_value";
             case 16:
-                return "end of line";
+                return "binary_value";
             case 17:
-                return "end of file";
+                return "end of line";
             case 18:
-                return "string";
+                return "end of file";
             case 19:
+                return "string";
+            case 20:
+                return "spaces";
+            case 21:
                 return "unkown";
             default:
                 return "unkown bis";

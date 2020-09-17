@@ -17,6 +17,9 @@ namespace lexer
     // return true if the string is a basal operator
     bool matchOP( string op );
 
+    // return true if the string is a basal relationnal operator
+    bool matchRelOP( string op );
+
     // return true if the string is a basal keyword
     bool matchKEYWORD( string op );
 
@@ -42,7 +45,7 @@ namespace lexer
     bool matchOneLetterOP( char op );
 
     // split a string with a delimiter 
-    vector<string> splitLine( string line );
+    vector<string> splitLine( string line, bool tokenizeSpaces=false );
     token tokenizeOneWord( string txt );
 
 

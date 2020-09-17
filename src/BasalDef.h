@@ -13,6 +13,7 @@ namespace basal
     {
         IDENTIFIER,         // identifier
         OP,                 // operator
+        RELOP,              // relationnal operator
         KEYWORD,            // keyword
         RESERVED,           // reserved functions
         QUOTES,
@@ -30,6 +31,13 @@ namespace basal
         ENDL,
         STOP,
         STRING,
+        SPACES,
+        UNKNOWN
+    };
+    enum Type   // basal types // TODO add more types ?
+    {
+        INT,
+        BIN,
         UNKNOWN
     };
 

@@ -42,6 +42,11 @@ namespace lexer
              or op=="+"  or op=="-" or op=="/"   or op=="*"   or op=="^"  or op=="%" );
     }
 
+    // return true if the string is a basal relationnal operator
+    bool matchRelOP( string op )
+    {
+        return( op=="==" or op=="<" or op==">" or op==">=" or op=="<=" or op=="!=" );
+    }
 
     // return true if the string is a basal keyword
     bool matchKEYWORD( string op )
@@ -171,7 +176,7 @@ namespace lexer
         return( i > 0 and line[i-1] == '\\');
     }
     
-    // helper function for splitline
+    // helper function for splitLine
     bool matchOneLetterOP( char op )
     {
         return( op=='='  or op=='<'   or op=='>' or op=='>' or op=='<' or op=='!' 
@@ -179,7 +184,7 @@ namespace lexer
     }
 
     // split a string into words, stored in a vector
-    vector<string> splitLine( string line )
+    vector<string> splitLine( string line, bool tokenizeSpaces )
     {
         vector<string> words;
         string word = "";
@@ -194,10 +199,13 @@ namespace lexer
             if( isSpace( line[i]) and quotes == false )
             {    
                 endWord( words, word );
+                if( tokenizeSpaces ) word += line[i];
                 while( isSpace( line[i+1]) ) 
                 {
+                    if( tokenizeSpaces ) word += line[i+1];
                     i++;    
                 }
+                if( tokenizeSpaces ) endWord( words, word );
                 continue;
             }
             else if( c==',' or c=='&' or c=='(' or c==')' or c=='[' or c==']' or c=='{' or c=='}' )
@@ -296,14 +304,16 @@ namespace lexer
         else if( txt == "{" ) type = LBRACES;
         else if( txt == "}" ) type = RBRACES;
         else if( txt == "var" or txt == "bin" or txt == "array" or txt == "tableau" ) type = KEYWORD;         // try to display types 
-        else if( matchOP( txt ))            type = OP;              // try to match op
+        else if( matchRelOP( txt ))         type = RELOP;           // try to match relationnal operators
+        else if( matchOP( txt ))            type = OP;              // try to match operators
         else if( matchRESERVED( txt ))      type = RESERVED;        // try to match reserved functions
         else if( matchKEYWORD( txt ))       type = KEYWORD;         // try to match basal keywords
         else if( matchDecimalValue( txt ))  type = DECIMAL_VALUE;   // try to match decimal values
         else if( matchHexaValue( txt ))     type = HEXA_VALUE;      // try to match hexa values
         else if( matchBinValue( txt ))      type = BINARY_VALUE;    // try to match binary values
         else if( matchIdentifier( txt))     type = IDENTIFIER;      // try to match label call ex: jump Hello_World_Proc
-        else if( quotes ) type = STRING;
+        else if( quotes )                   type = STRING;
+        else if( isSpace( txt[0] ))         type = SPACES;
 
         token ret( txt, type );
         return( ret ); 
