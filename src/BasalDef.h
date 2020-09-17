@@ -39,9 +39,10 @@ namespace basal
     };
     enum Type   // basal types // TODO add more types ?
     {
-        INT,
+        VAR,
         BIN,
-        ERROR
+        UNDECLARED,
+        VARTYPEERROR
     };
 
     // helper function, allow to get string from enum

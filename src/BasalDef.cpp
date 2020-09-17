@@ -77,9 +77,9 @@ namespace basal
     Type getTypeFromString( string s )
     {
         s = lexer::to_upper( s );
-        if( s == "INT" ) return INT;
+        if( s == "VAR" ) return VAR;
         else if( s == "BIN" ) return BIN;
-        return ERROR;
+        return VARTYPEERROR ;
     } 
 
     // return the corresponding string from basal Type
@@ -87,12 +87,14 @@ namespace basal
     {
         switch( type )
         {
-            case INT:
+            case VAR:
                 return "int";
             case BIN:
                 return "bin";
-            case ERROR:
-                return "error";
+            case UNDECLARED:
+                return "undeclared";
+            case VARTYPEERROR:
+                return "VARTYPEERROR:not supposed to happen";
             default:
                 return "WTF";
         }

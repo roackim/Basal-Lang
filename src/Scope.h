@@ -11,14 +11,16 @@ using std::vector;
 
 struct Variable
 {
-    Variable( string Name, basal::Type Type, unsigned off )
-    : name( Name )
-    , type( Type )
-    , offset( off ){}; 
+    Variable( string p_name, basal::Type p_type, unsigned p_offset)
+    : name( p_name )
+    , type( p_type )
+    , offset( p_offset )
+    , depth( 0 ){}; 
 
-    string name;     // variable name
+    string name;            // variable name
     basal::Type type;       // variable type
     unsigned offset;        // position in stack relative to scope position
+    unsigned depth;         // how many scope ago was the var declared ( must
 };
 
 
@@ -27,15 +29,16 @@ struct Variable
 class Scope
 {
 public:
-    Scope( Scope* p ): parent( p ){ };
-    bool isDeclared( string varName ); // return true if the var is known in this scope, or any parent scope
+    Scope( Scope* p ): p_parentScope( p ){ };
+    bool isDeclared( string varName ); // return true if the var is known in this scope, or any parentScope scope
     void declareVar( string varName, basal::Type type );
+    Variable getVar( string varName, unsigned depth = 0 );
 
 private:
     bool isDeclaredLocally( string varName );
-    vector<Variable> declaredVariables;
+    vector<Variable> varArray;
     unsigned varNbr = 0;
-    Scope* parent = nullptr;
+    Scope* p_parentScope = nullptr;
 };
 
 

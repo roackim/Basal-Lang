@@ -11,7 +11,7 @@ namespace basal
     // default constructor of the compiler object
     Compiler::Compiler( void )
     {
-        p_scope = new Scope( nullptr ); // Global Scope
+        scope = new Scope( nullptr ); // Global Scope
     }
 
     // compile basal file to basal assembly
@@ -148,7 +148,6 @@ namespace basal
         else if( op=="^" )
         {
             stringstream s;
-            s << ":POW_" << tagNumber << endl;
             s << "    copy bx, cx"  << endl;
             s << "    copy ax, bx"  << endl;
             s << "    copy  1, ax"  << endl;
@@ -354,7 +353,7 @@ namespace basal
             }
             program << ":CMP_FALSE_" << tagNumber << endl;
             program << "    push 0" << endl;
-            program << "    jump CMP_END_" << tagNumber << endl;
+            program << "    jump CPM_END_" << tagNumber << endl;
             program << ":CMP_TRUE_" << tagNumber << endl;
             program << "    push 1" << endl;
             program << ":CMP_END_" << tagNumber << endl;
@@ -423,7 +422,7 @@ namespace basal
         {
             uint16_t value = parseValue();
             program << "    push " << value << endl;
-            type = VAR;
+            type = INT;
 
         } 
         else if( current.type == RESERVED_VALUE )
@@ -439,23 +438,35 @@ namespace basal
         }
         else if( current.type == IDENTIFIER ) // not a declaration, identifier is used as a variable
         {
-            string varName = current.text;
-            Variable var = p_scope->getVar( varName );
-            // throw error if var is undelared
-            if( var.type == UNDECLARED )
-            {
-                string mess = "The variable '" + varName + "' doesn't exist";
-                if( frenchEnabled ) mess = "La variable '" + varName + "' n'existe pas";
-                throwCompileError( mess );
-            }
-            // var is declared
-            program << "# using var: " << varName << endl;
-            program << "    copy fx, ax" << endl;
-            program << "    add  " << var.offset << ", ax" << endl;
-            program << "    copy (ax), bx" << endl;
-            program << "    push bx" << endl;
+            throwCompileError("Identifiers are not implemented yet");
 
-            readToken();
+            // TODO variables & functions
+            if( false ) // TODO SCOPE var declaration
+            {
+                string message;
+                if( tokens[j+1].type == LPAREN ) // identifier is a function name
+                {
+                    message = "The function '" + current.text + "' does not exists"; 
+                    if( frenchEnabled ) message = "La fonction '" + current.text + "' n'existe pas";
+                }
+                else // identifier is a variable
+                {
+                    message = "The variable '" + current.text + "' does not exists";
+                    if( frenchEnabled ) message = "La variable '" + current.text + "' n'existe pas";
+                    if( false )// variableExistInAnotherScope() // TODO // more precise error message
+                    {
+                        if( frenchEnabled ) message += " dans ce champ";
+                        else message += " in this scope";
+                    }
+                }
+                throwCompileError( message ); // throw an error, terminate compilation
+            }
+            else // function exists or variable exists in the current scope 
+            {
+                ;
+            }
+            // TODO get variable type
+            type = INT; // TODO subject to change depending on the variable type
 
         }
         else if( current.type == LPAREN )
@@ -500,23 +511,30 @@ namespace basal
         }
         // check if the variable has already been declared
         string varName = current.text;
-        Variable var = p_scope->getVar( varName );
-
-        if( var.type != UNDECLARED )
+        if( scope->isDeclared( varName ))
         {
             string mess = "The variable '" + varName + "' already exists";
             if( frenchEnabled ) mess = "La variable '" + varName + "' existe déjà";
             throwCompileError( mess );
         }
 
-        p_scope->declareVar( varName, varType );
-        
-        program << "# declaring var: " << varName << endl;
-        program << "    push 0 " << endl; // create variable
+        scope->declareVar( varName, varType );
+        readToken(); // read identifier
 
-        if( tokens[j+1].text == "=" ) parseAssignement();
-        else readToken(); // read identifier
+        if( current.text == "=" ) // assign after declaration
+        {
+            readToken(); // read '=' token
+            Type exprType = parseExpression();
 
+            if( exprType != varType )
+            {
+                string mess = "Cannot assign a " + basal::getStringFromType( exprType ) 
+                    + " expression to a " + basal::getStringFromType( varType ) + " variable"  ;
+                if( frenchEnabled ) mess = "Impossible d'assigner une expression de type " + basal::getStringFromType( exprType ) 
+                    + " à une variable de type " + basal::getStringFromType( varType ) ;
+                throwCompileError( mess );
+            } 
+        }
     }
 
     // Assignement := Identifier "=" Expression
@@ -528,31 +546,6 @@ namespace basal
             if( frenchEnabled ) mess = "Identifiant attendu";
             throwCompileError( mess );
         }
-        // we can assume current.type is an identifier
-
-        string varName = current.text;
-        Variable var = p_scope->getVar( varName );
-
-        if( var.type == UNDECLARED )
-        {
-            string mess = "The variable '" + varName + "' doesn't exist";
-            if( frenchEnabled ) mess = "La variable '" + varName + "' n'existe pas";
-            throwCompileError( mess );
-        }
-        // we can assume the varaible has been declared
-
-        readToken();
-        if( current.text == "=" ) readToken();
-        
-        Type exprType = parseExpression();
-
-        // [ code gen ]
-
-        program << "# assignement to var: " << varName << endl;
-        program << "    copy fx, ax" << endl;
-        program << "    add  " << var.offset << ", ax" << endl;
-        program << "    pop  bx" << endl;
-        program << "    copy bx, (ax)" << endl << endl;
 
     }
 
@@ -560,8 +553,10 @@ namespace basal
     bool Compiler::dispatchFunctionCall( void )
     {
 
-        if( current.type == TYPE ) parseVarDeclaration();
-        else if( current.type == IDENTIFIER ) parseAssignement();
+        if( current.type == TYPE )
+        { 
+            parseVarDeclaration();
+        }
         else if( current.type == STOP ) return false;
         else if( current.type == ENDL ) return true;
         else

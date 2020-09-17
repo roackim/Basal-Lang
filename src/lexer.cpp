@@ -74,7 +74,7 @@ namespace lexer
     bool matchTYPE( string op )
     {
         op = to_upper( op );
-        return( op=="INT" or op=="BIN" or op=="ARRAY" or op=="TABLEAU" );
+        return( op=="VAR" or op=="BIN" or op=="ARRAY" or op=="TABLEAU" );
     }
 
     // return true if the string is a basal reserved function

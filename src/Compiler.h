@@ -35,8 +35,8 @@ namespace basal   // keep things contained in a namespace.  basm = Basal Assembl
         bool frenchEnabled = false;         // switch error messages to french
     private:
 
-        Scope* scope = nullptr;                 // current scope
-        unsigned lineNbr = 1;                   // one empty line is always artifially added at the begining
+        Scope* p_scope = nullptr;           // current scope
+        unsigned lineNbr = 1;               // one empty line is always artifially added at the begining
         map<string, uint16_t> variables;    // store addresses of labels
         unsigned stackPointer = 0;
         token current;                      // used as current token
@@ -95,6 +95,9 @@ namespace basal   // keep things contained in a namespace.  basm = Basal Assembl
 
         // VarDeclaration := type identifier [ "=" Expression ]
         void parseVarDeclaration( void );
+
+        // Assignement := Identifier "=" Expression
+        void parseAssignement( void );
 
         bool dispatchFunctionCall( void );
 
