@@ -124,17 +124,34 @@ namespace basal
     // helper function to generate basm instructions
     string Compiler::getInstrFromADDorMUL( string op )
     {
+        tagNumber++;
         op = lexer::to_upper( op );
         if     ( op=="+" ) return "add ";
         else if( op=="-" ) return "sub "; 
         else if( op=="*" ) return "mul ";
         else if( op=="/" ) return "div ";
-        else if( op=="^" ) return "pow ";
         else if( op=="%" ) return "mod ";
         else if( op=="AND" or op=="ET" ) return "and ";
         else if( op=="OR"  or op=="OU" ) return "or  ";
+        else if( op=="^" )
+        {
+            stringstream s;
+            s << "    copy bx, cx"  << endl;
+            s << "    copy ax, bx"  << endl;
+            s << "    copy  1, ax"  << endl;
+            s << ":POW_LOOP_" << tagNumber << endl;
+            s << "    cmp  0, cx"   << endl;
+            s << "    jump POW_END_" << tagNumber << " if EQU" << endl;
+            s << "    mul  bx, ax"  << endl;
+            s << "    sub  1, cx"   << endl;
+            s << "    jump POW_LOOP_" << tagNumber << endl;
+            s << ":POW_END_" << tagNumber << endl;
+            return s.str();
+
+        }
         else
-            throwSimpleError("Should no happen: error in getInstrFromADDorMUL()");
+            throwSimpleError("Should not happen: error in getInstrFromADDorMUL(), token: " + op);
+        return "";
     }
 
     // increment j and reassign token t
@@ -363,10 +380,10 @@ namespace basal
             Type type2 = parseTerm();
 
             string instr = getInstrFromADDorMUL( op );
-            program << "    pop  ax" << endl;   // right operand
-            program << "    pop  bx" << endl; 
-            program << "    " << instr << " ax, bx" << endl;
-            program << "    push bx" << endl;
+            program << "    pop  bx" << endl;   // right operand
+            program << "    pop  ax" << endl; 
+            program << "    " << instr << " bx, ax" << endl;
+            program << "    push ax" << endl;
 
             checkOperandTypes( type, op, type2 ); // doesn't account for relationnal operators
             type = type2;
@@ -387,10 +404,13 @@ namespace basal
             Type type2 = parseFactor();
 
             string instr = getInstrFromADDorMUL( op );
-            program << "    pop  ax" << endl;   // right operand
-            program << "    pop  bx" << endl; 
-            program << "    " << instr << " ax, bx" << endl;
-            program << "    push bx" << endl;
+            program << "    pop  bx" << endl;   // right operand
+            program << "    pop  ax" << endl;   // left operand
+            if( op=="^" )
+                program << instr << endl;
+            else
+                program << "    " << instr << " bx, ax" << endl;
+            program << "    push ax" << endl;
             
             checkOperandTypes( type, op, type2 ); // doesn't account for relationnal operators
             type = type2;
