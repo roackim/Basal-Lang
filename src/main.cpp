@@ -45,7 +45,7 @@ int main( int argc, char *argv[] )
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::milli> elapsed = end - start;
     if( DISP_TIME ) 
-        cout << "Compiled in  " << elapsed.count() << " ms" << endl;
+        cout << "Compiled  in " << elapsed.count() << " ms" << endl;
 
     string out = "out.basm";
     if( argc > 3 ) // output

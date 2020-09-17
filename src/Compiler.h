@@ -1,5 +1,6 @@
 #pragma once
 #include "BasalDef.h"
+#include "Scope.h"
 
 #include <iostream>
 #include <sstream>
@@ -25,6 +26,7 @@ namespace basal   // keep things contained in a namespace.  basm = Basal Assembl
     class Compiler
     {
     public:
+        Compiler( void );                       // default constructor
         string basm_program;                    // store all the instructions
         // TODO put private below, only public for debugging purposes
         vector<token> tokens;                   // store all tokens
@@ -32,8 +34,8 @@ namespace basal   // keep things contained in a namespace.  basm = Basal Assembl
         unsigned j = 0;                         // used to count tokens
     private:
 
+        Scope* scope = nullptr;                 // current scope
         unsigned lineNbr = 0;                   // one empty line is always artifially added at the begining
-
         map<string, uint16_t> variables;    // store addresses of labels
         unsigned stackPointer = 0;
         token current;                      // used as current token
@@ -77,9 +79,6 @@ namespace basal   // keep things contained in a namespace.  basm = Basal Assembl
 
         // load a file and tokenize it
         void loadAndTokenize( string );
-
-        // look at a token and redirect toward the appropriatre function, eg : ADD -> call parseAddBasedInstr()     
-        bool parseOneInstr( void );
 
         // Expr := SimpleExpr [ RelationalOperator SimpleExpr ]
         Type parseExpression( void );

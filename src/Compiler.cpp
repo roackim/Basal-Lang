@@ -8,6 +8,12 @@
  
 namespace basal
 {
+    // default constructor of the compiler object
+    Compiler::Compiler( void )
+    {
+        scope = new Scope( nullptr ); // Global Scope
+    }
+
     // compile basal file to basal assembly
     void Compiler::compile( string file_name )
     {
@@ -289,22 +295,6 @@ namespace basal
         tokens.push_back( last_token );
     }
 
-    // parse one instruction from the token array
-    bool Compiler::parseOneInstr( void ) // TODO 
-    {
-        if( current.text == "" ) // skip empty tokens. (might happens when using tabs mixed )
-        {
-            readToken();
-            return true;
-        }
-        else if( current.type == ENDL ) 
-        {
-            return true; // do nothing
-        }
-        else
-            return false;
-        return false;
-    }
 
     using basal::Type;
     // Expression := SimpleExpression [ RelationalOperator SimpleExpression ]
