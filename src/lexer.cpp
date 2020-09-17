@@ -46,7 +46,7 @@ namespace lexer
     bool matchMULOP( string op )
     {
         string up = to_upper( op );
-        return( op=="*" or op=="/" or op=="^" or op=="%" or up=="AND" or up=="ET");
+        return( op=="*" or op=="/" or op=="^" or op=="%" or op=="." or up=="AND" or up=="ET");
         
     }
 
@@ -54,6 +54,13 @@ namespace lexer
     bool matchRELOP( string op )
     {
         return( op=="==" or op=="<" or op==">" or op==">=" or op=="<=" or op=="!=" );
+    }
+
+    // return true if the string is a NOT operator
+    bool matchNOT( string op )
+    {
+        op = to_upper( op );
+        return( op=="!" or op=="NOT" or op=="NON" );
     }
 
     // return true if the string is a basal operator
@@ -74,14 +81,14 @@ namespace lexer
     bool matchTYPE( string op )
     {
         op = to_upper( op );
-        return( op=="VAR" or op=="BIN" or op=="ARRAY" or op=="TABLEAU" );
+        return( op=="VAR" or op=="BIN");
     }
 
     // return true if the string is a basal reserved function
     bool matchRESERVED_FUNC( string op )
     {
         op = to_upper( op ); // non case sensitive op 
-        return( op=="DISP" or op=="AFFICHER" );  
+        return( op=="DISP" or op=="AFFICHER");  
     }
 
     // return true if strign literal for boolean
@@ -236,7 +243,7 @@ namespace lexer
                 if( tokenizeSpaces ) endWord( words, word );
                 continue;
             }
-            else if( c==',' or c=='&' or c=='(' or c==')' or c=='[' or c==']' or c=='{' or c=='}' )
+            else if( c==',' or c=='&' or c=='(' or c==')' or c=='[' or c==']' or c=='{' or c=='}' or c=='.' )
             {
                 if( quotes ) word += line[i];
                 else
@@ -334,6 +341,7 @@ namespace lexer
         else if( matchRELOP( txt ))             type = RELOP;           // try to match relationnal operators
         else if( matchADDOP( txt ))             type = ADDOP;           // try to match additive operators
         else if( matchMULOP( txt ))             type = MULOP;           // try to match additive operators
+        else if( matchNOT( txt ))               type = NOT;             // try to match not operator
         else if( matchRESERVED_FUNC( txt ))     type = RESERVED_FUNC;   // try to match reserved functions
         else if( matchRESERVED_VALUE( txt ))    type = RESERVED_VALUE;  // try to match reserved functions
         else if( matchTYPE( txt ))              type = TYPE;            // try to match basal type declaration

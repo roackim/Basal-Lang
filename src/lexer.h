@@ -23,6 +23,9 @@ namespace lexer
     // return true if the string is a basal relationnal operator
     bool matchRELOP( string op );
 
+    // return true if the string is a NOT operator
+    bool matchNOT( string op );
+
     // return true if the string is a basal operator
     bool matchOP( string op );
 

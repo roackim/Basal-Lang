@@ -15,6 +15,7 @@ namespace basal
         ADDOP,              // additive operator
         MULOP,              // multiplicative operator 
         RELOP,              // relationnal operator
+        NOT,
         KEYWORD,            // keyword
         RESERVED_FUNC,           // reserved functions
         QUOTES,
@@ -29,24 +30,21 @@ namespace basal
         DECIMAL_VALUE,      //  |
         HEXA_VALUE,         //   > values
         BINARY_VALUE,       //  |
-        ENDL,
-        STOP,
+        RESERVED_VALUE,
+        TYPE,
         STRING,
         SPACES,
-        TYPE,
-        RESERVED_VALUE,
+        ENDL,
+        STOP,
         UNKNOWN
     };
     enum Type   // basal types // TODO add more types ?
     {
         VAR,
-        BIN,
+        BOOL,
         UNDECLARED,
-        VARTYPEERROR
+        TYPE_ERROR
     };
-
-    // helper function, allow to get string from enum
-    string getTokenTypeStr( TokenType type );
 
     // return the corresponding basal Type
     Type getTypeFromString( string s );

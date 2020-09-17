@@ -58,10 +58,13 @@ namespace basal   // keep things contained in a namespace.  basm = Basal Assembl
         void throwSimpleError( string error_message );
 
         // Call throwCompileError if incompatible types 
-        void checkOperandTypes( Type type1, string OP, Type type2 );
+        void checkOperandTypes( string OP, Type type1, Type type2 );
+
+        // Call throwCompileError if incompatible type
+        void checkOperandTypes( string OP, Type type1 );
 
         // helper function to generate basm instructions
-        string getInstrFromADDorMUL( string op );
+        string getInstrFromADDorMUL( string op, Type type1, Type type2 );
 
         // increment j and reassign token t
         bool readToken( void );

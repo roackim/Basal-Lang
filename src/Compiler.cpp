@@ -114,37 +114,63 @@ namespace basal
 
 
     // Call throwCompileError if incompatible types 
-    void Compiler::checkOperandTypes( Type type1, string OP, Type type2 )
+    void Compiler::checkOperandTypes( string OP, Type type1, Type type2 )
     {
         string op = lexer::to_upper( OP );
-        if( op=="+" or op=="-" or op=="*" or op=="/" or op=="^" or op=="%" ) // var operands expected
-        {
+        // Error message
+        string message = "The operator '" + OP + "' is not compatible with operands types '" 
+            + basal::getStringFromType( type1 ) + "' and '" + basal::getStringFromType( type2 ) + "'";
+        if( frenchEnabled ) message = "L'opérateur '" + OP + "' est imcompatible avec les opérandes de types '" 
+            + basal::getStringFromType( type1 ) + "' et '" + basal::getStringFromType( type2 ) + "'";
 
-        }
-        else if( op=="OR" or op=="OU" or op=="AND" or op=="ET" ) // bin operands expected
+        if( op=="-" or op=="*" or op=="/" or op=="^" or op=="%" ) // var operands expected
         {
-            if( type1 != BIN or type2 != BIN )
+            if( type1 != VAR or type2 != VAR )
+                throwCompileError( message );
+        }
+        else if( op=="OR" or op=="OU" or op=="AND" or op=="ET" or op=="." ) // bin operands expected
+        {
+            if( type1 != BOOL or type2 != BOOL )
+                throwCompileError( message );
+        }
+        else if( op=="+" )
+        {
+            if( type1 != type2 )
             {
-                string message = "";
-                if( frenchEnabled ) message = "Types incompatibles avec l'operateur '" + OP + "'";
-                else if( not frenchEnabled ) message = "Incompatible types with operator '" + OP + "'";
                 throwCompileError( message );
             }
         }
     }
 
+    // Call throwCompileError if incompatible type
+    void Compiler::checkOperandTypes( string OP, Type type1 )
+    {
+        string op = lexer::to_upper( OP );
+        // Error message
+        string message = "The operator '" + OP + "' is not compatible with operand type '" 
+            + basal::getStringFromType( type1 ) + "'";
+        if( frenchEnabled ) message = "L'opérateur '" + OP + "' est imcompatible avec l'opérande de type '" 
+            + basal::getStringFromType( type1 ) + "'";
+
+        if( op=="NOT" or op=="NON" or op=="!" )
+        {
+            if( type1 != BOOL )
+                throwCompileError( message );
+        } 
+    }
+
     // helper function to generate basm instructions
-    string Compiler::getInstrFromADDorMUL( string op )
+    string Compiler::getInstrFromADDorMUL( string op, Type type1, Type type2 )
     {
         tagNumber++;
         op = lexer::to_upper( op );
-        if     ( op=="+" ) return "add ";
+        if     ( op=="+" and type1 == VAR and type2 == VAR ) return "add ";
         else if( op=="-" ) return "sub "; 
         else if( op=="*" ) return "mul ";
         else if( op=="/" ) return "div ";
         else if( op=="%" ) return "mod ";
-        else if( op=="AND" or op=="ET" ) return "and ";
-        else if( op=="OR"  or op=="OU" ) return "or  ";
+        else if( op=="AND" or op=="ET" or op=="." ) return "and ";
+        else if( op=="OR"  or op=="OU" or op=="+" ) return "or  ";
         else if( op=="^" )
         {
             stringstream s;
@@ -312,7 +338,7 @@ namespace basal
 
         if( current.type == RELOP )
         {
-            type = BIN;
+            type = BOOL;
             program << "    pop  ax" << endl;
             program << ":CMP_" << tagNumber << endl;
 
@@ -366,7 +392,7 @@ namespace basal
     // SimpleExpression := Term { additiveOperator Term }
     Type Compiler::parseSimpleExpression( void )
     {
-        Type type = parseTerm();
+        Type type1 = parseTerm();
 
         while( current.type == ADDOP )
         {
@@ -375,23 +401,23 @@ namespace basal
             
             Type type2 = parseTerm();
 
-            string instr = getInstrFromADDorMUL( op );
+            string instr = getInstrFromADDorMUL( op, type1, type2 );
             program << "    pop  bx" << endl;   // right operand
             program << "    pop  ax" << endl; 
             program << "    " << instr << " bx, ax" << endl;
             program << "    push ax" << endl;
 
-            checkOperandTypes( type, op, type2 ); // doesn't account for relationnal operators
-            type = type2;
+            checkOperandTypes( op, type1, type2 ); // doesn't account for relationnal operators
+            type1 = type2;
         }
         
-        return type;
+        return type1;
     }
 
     // Term := Factor { multiplicativeOperator Factor }
     Type Compiler::parseTerm( void )
     {
-        Type type = parseFactor();
+        Type type1 = parseFactor();
         while( current.type == MULOP )
         {
             string op = lexer::to_upper( current.text );
@@ -399,7 +425,7 @@ namespace basal
             
             Type type2 = parseFactor();
 
-            string instr = getInstrFromADDorMUL( op );
+            string instr = getInstrFromADDorMUL( op, type1, type2 );
             program << "    pop  bx" << endl;   // right operand
             program << "    pop  ax" << endl;   // left operand
             if( op=="^" )
@@ -408,17 +434,18 @@ namespace basal
                 program << "    " << instr << " bx, ax" << endl;
             program << "    push ax" << endl;
             
-            checkOperandTypes( type, op, type2 ); // doesn't account for relationnal operators
-            type = type2;
+            checkOperandTypes( op, type1, type2 ); // doesn't account for relationnal operators
+            type1 = type2;
         }
         
-        return type;
+        return type1;
     }
 
     // Factor := number | identifier | "(" Expression ")"
     Type Compiler::parseFactor( void )
     {
-        Type type;
+        Type type = UNDECLARED;
+
         if( current.type == DECIMAL_VALUE or current.type == HEXA_VALUE or current.type == BINARY_VALUE or current.text == "-")
         {
             uint16_t value = parseValue();
@@ -428,7 +455,7 @@ namespace basal
         } 
         else if( current.type == RESERVED_VALUE )
         {
-            type = BIN;
+            type = BOOL;
             string s = lexer::to_upper( current.text );
             if( s == "TRUE" or s == "VRAI" )
                 program << "    push 1" << endl;
@@ -436,6 +463,19 @@ namespace basal
                 program << "    push 0" << endl;
 
             readToken();
+        }
+        else if( current.type == NOT )
+        {
+            string op = current.text;
+            readToken(); // read 'not' operator
+
+            type = parseFactor();
+            program << "    pop  ax" << endl;
+            program << "    add  1, ax" << endl;
+            program << "    mod  2, ax" << endl;
+            program << "    push ax" << endl;
+            checkOperandTypes( op, type );
+
         }
         else if( current.type == IDENTIFIER ) // not a declaration, identifier is used as a variable
         {
@@ -456,6 +496,7 @@ namespace basal
             program << "    push bx" << endl;
 
             readToken();
+            type = var.type;
 
         }
         else if( current.type == LPAREN )
@@ -472,8 +513,8 @@ namespace basal
         }
         else    // throw error
         {
-            string message = "Unexpected token: '" + current.text + "'|" + getTokenTypeStr(current.type);
-            if( frenchEnabled ) message = "Symbole innatendu '" + current.text + "'|" + getTokenTypeStr(current.type);
+            string message = "Unexpected token: '" + current.text + "'|" ;
+            if( frenchEnabled ) message = "Symbole innatendu '" + current.text + "'|" ;
             throwCompileError( message );
         }
         return type;
@@ -510,7 +551,7 @@ namespace basal
         }
 
         p_scope->declareVar( varName, varType );
-        
+
         program << "# declaring var: " << varName << endl;
         program << "    push 0 " << endl; // create variable
 
@@ -566,7 +607,6 @@ namespace basal
         else if( current.type == ENDL ) return true;
         else
         {
-            cout << lineNbr << " " << getTokenTypeStr( current.type ) << ": " << current.text << endl;
             string mess = "Unrecognized instruction";
             if( frenchEnabled ) mess = "Instruction inconnue";
             throwCompileError( mess );

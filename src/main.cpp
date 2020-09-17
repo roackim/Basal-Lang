@@ -65,7 +65,7 @@ int main( int argc, char *argv[] )
     outfile << ":Program" << endl;
     outfile << compiler.program.str() << std::endl;
     outfile << "    disp sp, mem" << endl; // debugging
-    outfile << "    disp 32, char" << endl;
+    outfile << "    disp 10, char" << endl;
     outfile << "    disp (sp), int" << endl;
     outfile << "    EXIT" << endl;
     outfile.close(); 
