@@ -36,6 +36,7 @@ namespace basal
         SPACES,
         ENDL,
         STOP,
+        EQU,
         UNKNOWN
     };
     enum Type   // basal types // TODO add more types ?
@@ -45,6 +46,9 @@ namespace basal
         UNDECLARED,
         TYPE_ERROR
     };
+
+
+    string getStringFromTokenType( TokenType type );
 
     // return the corresponding basal Type
     Type getTypeFromString( string s );

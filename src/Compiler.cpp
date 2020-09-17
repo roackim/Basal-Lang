@@ -444,18 +444,16 @@ namespace basal
     // Factor := number | identifier | "(" Expression ")"
     Type Compiler::parseFactor( void )
     {
-        Type type = UNDECLARED;
 
         if( current.type == DECIMAL_VALUE or current.type == HEXA_VALUE or current.type == BINARY_VALUE or current.text == "-")
         {
             uint16_t value = parseValue();
             program << "    push " << value << endl;
-            type = VAR;
+            return VAR;
 
         } 
         else if( current.type == RESERVED_VALUE )
         {
-            type = BOOL;
             string s = lexer::to_upper( current.text );
             if( s == "TRUE" or s == "VRAI" )
                 program << "    push 1" << endl;
@@ -463,18 +461,22 @@ namespace basal
                 program << "    push 0" << endl;
 
             readToken();
+            return BOOL;
         }
         else if( current.type == NOT )
         {
             string op = current.text;
             readToken(); // read 'not' operator
 
-            type = parseFactor();
+            Type type = parseFactor();
+            
             program << "    pop  ax" << endl;
             program << "    add  1, ax" << endl;
             program << "    mod  2, ax" << endl;
             program << "    push ax" << endl;
             checkOperandTypes( op, type );
+
+            return type;
 
         }
         else if( current.type == IDENTIFIER ) // not a declaration, identifier is used as a variable
@@ -496,13 +498,13 @@ namespace basal
             program << "    push bx" << endl;
 
             readToken();
-            type = var.type;
+            return var.type;
 
         }
         else if( current.type == LPAREN )
         {
             readToken(); // read left parent
-            type = parseExpression();
+            Type type = parseExpression();
             if( current.type == RPAREN ) readToken();
             else  // Error
             {
@@ -510,6 +512,7 @@ namespace basal
                 if( frenchEnabled ) message = "Parenthèse fermante manquante";
                 throwCompileError( message );
             }
+            return type;
         }
         else    // throw error
         {
@@ -517,7 +520,7 @@ namespace basal
             if( frenchEnabled ) message = "Symbole innatendu '" + current.text + "'|" ;
             throwCompileError( message );
         }
-        return type;
+        return UNDECLARED;
     }
 
     // VarDeclaration := type identifier [ "=" Expression ]

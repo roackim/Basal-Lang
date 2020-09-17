@@ -71,6 +71,7 @@ int main( int argc, char *argv[] )
     outfile.close(); 
 
     // cout << "Program:" << endl << compiler.program.str() << endl;
+
     // for( uint32_t i=0; i<compiler.tokens.size(); i++)
     // {
     //     if( compiler.tokens[i].type == basal::ENDL )
@@ -78,7 +79,7 @@ int main( int argc, char *argv[] )
     //         cout << endl;
     //     }
     //         cout << compiler.tokens[i].text << "|";
-    //         cout << basal::getTokenTypeStr( compiler.tokens[i].type ) << ", ";
+    //         cout << basal::getStringFromTokenType( compiler.tokens[i].type ) << ", ";
     // }
     // cout << endl;
 

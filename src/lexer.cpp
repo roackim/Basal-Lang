@@ -338,6 +338,7 @@ namespace lexer
         else if( txt == "]" ) type = RBRACKET;
         else if( txt == "{" ) type = LBRACES;
         else if( txt == "}" ) type = RBRACES;
+        else if( txt == "=" ) type = EQU;
         else if( matchRELOP( txt ))             type = RELOP;           // try to match relationnal operators
         else if( matchADDOP( txt ))             type = ADDOP;           // try to match additive operators
         else if( matchMULOP( txt ))             type = MULOP;           // try to match additive operators
