@@ -622,7 +622,7 @@ namespace basal
 
     }
 
-    // IfStatement := "IF" <bool>Expression "THEN" ENDL Statement {"ELSE" IfStatement } ["ELSE" "THEN" ENDL Statement] "END"
+    // IfStatement := "IF" <bool>Expression "THEN" ENDL {Statement} {"ELSE" "IF" <bool>Expression "THEN" ENDL  {Statement} } ["ELSE" "THEN" ENDL {Statement} ] "END"
     void Compiler::parseIfStatement( void )
     {
         readToken(); // read IF keyword
@@ -746,6 +746,18 @@ namespace basal
 
         program << "#########" << endl;
         program << ":IF_" << tag << "_END" << endl;
+
+    }
+
+    // ForStatement := "FOR" Identifier|VarDeclaration "UNTIL" <var>Expression "DO"
+    void Compiler::parseForStatement( void )
+    {
+
+    }
+
+    // WhileStatement := "WHILE" <bool>Expression "DO" {Statement} "END"
+    void Compiler::parseWhileStatement( void )
+    {
 
     }
 

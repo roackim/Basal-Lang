@@ -105,6 +105,13 @@ namespace basal   // keep things contained in a namespace.  basm = Basal Assembl
         // IfStatement := "IF" <bool>Expression "THEN" ENDL Statement {"ELSE" IfStatement } ["ELSE" "THEN" ENDL Statement] "END"
         void parseIfStatement( void );
 
+        // ForStatement := "FOR" Identifier|VarDeclaration "UNTIL" <var>Expression "DO"
+        void parseForStatement( void );
+
+        // WhileStatement := "WHILE" <bool>Expression "DO" {Statement} "END"
+        void parseWhileStatement( void );
+
+        // act as a selector between the various sort of statements
         bool parseStatement( void );
 
     };
