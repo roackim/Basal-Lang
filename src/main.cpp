@@ -1,5 +1,6 @@
 #include <iostream>
 #include <chrono> 
+#include <fstream>
 #include "Compiler.h"
 #include "BasalDef.h"
 
@@ -36,26 +37,41 @@ int main( int argc, char *argv[] )
         compiler.compile( file );
     } catch( const std::exception& e )
     {
-        cout << "An Error has occured during compilation" << endl;
+        cerr << "An Error has occured during compilation" << endl;
+        return 0;
     }
 
     // end chrono
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::milli> elapsed = end - start;
     if( DISP_TIME ) 
-        cout << "Assembled in " << elapsed.count() << " ms\n";
+        cout << "Compiled in  " << elapsed.count() << " ms" << endl;
 
-    cout << "Program:" << endl << compiler.program.str() << endl;
-    for( uint32_t i=0; i<compiler.tokens.size(); i++)
+    string out = "out.basm";
+    if( argc > 3 ) // output
     {
-        if( compiler.tokens[i].type == basal::ENDL )
-        {
-            cout << endl;
-        }
-            cout << compiler.tokens[i].text << "|";
-            cout << basal::getTokenTypeStr( compiler.tokens[i].type ) << ", ";
-
+        string f{ argv[2] };
+        if( f == "-o" )
+            out = argv[3];
     }
+
+    std::ofstream outfile( out );
+    outfile << ":Program" << endl;
+    outfile << compiler.program.str() << std::endl;
+    outfile << "    disp (sp), int" << endl; // debugging
+    outfile << "    EXIT" << endl;
+    outfile.close(); 
+
+    // cout << "Program:" << endl << compiler.program.str() << endl;
+    // for( uint32_t i=0; i<compiler.tokens.size(); i++)
+    // {
+    //     if( compiler.tokens[i].type == basal::ENDL )
+    //     {
+    //         cout << endl;
+    //     }
+    //         cout << compiler.tokens[i].text << "|";
+    //         cout << basal::getTokenTypeStr( compiler.tokens[i].type ) << ", ";
+    // }
 
 
     return 0;

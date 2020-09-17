@@ -186,6 +186,13 @@ namespace basal
     // parse decimals, binary and hexadecimal value, return a uint16 encoded value, and call readToken()
     uint16_t Compiler::parseValue( void )
     {
+
+        int sign = 1;
+        if( current.text == "-" )
+        {
+            sign = -1;
+            readToken();
+        }
         string value = current.text;
         if( current.type == DECIMAL_VALUE )
         {
@@ -195,7 +202,7 @@ namespace basal
                 throwCompileError( "Value '" + current.text + "' is too big to be encoded.\n\trange: [0, 65535] or [-32768, 32767]" );
             }
             readToken();
-            return static_cast<uint16_t>( i );
+            return static_cast<uint16_t>( sign*i );
         }
         else if( current.type == BINARY_VALUE )
         {
@@ -206,7 +213,7 @@ namespace basal
             }
             long int i = std::stol( value.c_str(), nullptr, 2);
             readToken();
-            return static_cast<uint16_t>( i );
+            return static_cast<uint16_t>( sign*i );
         }
         else if( current.type == HEXA_VALUE )
         {
@@ -217,7 +224,7 @@ namespace basal
             }
             long int i = std::stol( value.c_str(), nullptr, 16);
             readToken();
-            return static_cast<uint16_t>( i );
+            return static_cast<uint16_t>( sign*i );
         }
         throwCompileError( "Expected a value" );
         return 0;
@@ -396,7 +403,7 @@ namespace basal
     Type Compiler::parseFactor( void )
     {
         Type type;
-        if( current.type == DECIMAL_VALUE or current.type == HEXA_VALUE or current.type == BINARY_VALUE )
+        if( current.type == DECIMAL_VALUE or current.type == HEXA_VALUE or current.type == BINARY_VALUE or current.text == "-")
         {
             uint16_t value = parseValue();
             program << "    push " << value << endl;
