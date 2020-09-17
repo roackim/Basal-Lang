@@ -11,7 +11,7 @@ summary :
 // highlight uppercase : syn match preproc "[A-Z]"
 // highlight keywords  : syn match keyword "var\|bin\|set\|array\|string\|str"
 // highlight comments  : syn match comment "#.*$" 
-
+// syn match preproc "[A-Z]" | syn match keyword "var\|bin\|set\|array\|string\|str" | syn match comment "#.*$" 
 
 # 2numbers : 1 integer part, 1 decimal part
 # hence every var would be int and float 
@@ -32,6 +32,7 @@ bin array[8] t2 = { 0, 1, false, 0, 0, 0, true, 1 }
 # other possibility -> int and bin are implicitly convertible ( ex: false = 0 and true otherwise like C )
 var a # automatically initialized to 0 | false
 array[5] t = { 1, 2, 3, false, vrai } # perhaps not very coherent
+
 
 # Fonction recursive affichant la suite de fibonacci
 FONCTION FIBO( var a, var b, var c )
@@ -103,4 +104,23 @@ FIN
 var a = F( 3 ) % 2
 
 
+FOR var i = 0 UNTIL 10 DO
+    DISP( i )
+END
 
+
+POUR i JUSQUE 10 FAIRE
+    AFFICHER( i )
+FIN
+
+var i = 0
+WHILE i < 10 DO
+    DISP( i )
+    i = i + 1
+END
+
+var i = 0
+TANTQUE i < 10 FAIRE
+    AFFICHER( i )
+    i = i + 1
+FIN
