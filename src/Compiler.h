@@ -26,28 +26,39 @@ namespace basal   // keep things contained in a namespace.  basm = Basal Assembl
     {
     public:
         string basm_program;                    // store all the instructions
+        // TODO put private below, only public for debugging purposes
+        vector<token> tokens;                   // store all tokens
+        stringstream program;                   // contains basm program
+        unsigned j = 0;                         // used to count tokens
+    private:
 
-    private:
-        unsigned j{ 0 };                            // used to count tokens
-        unsigned lineNbr{ 0 };                      // one empty line is always artifially added at the begining
-        vector<token> tokens;                       // store all tokens
-    public: // debugging purposes
-        map<string, uint16_t> declared_identifiers; // store addresses of labels
-    private:
-        token current;                  // used as current token
-        string fileName;                // store source file name
-        stringstream program;                 // contains basm program
-        bool frenchMessages{ 0 };       // switch error messages to french
-        unsigned tagNumber{ 0 };        // used to differenciate labels generation
+        unsigned lineNbr = 0;                   // one empty line is always artifially added at the begining
+
+        map<string, uint16_t> variables;    // store addresses of labels
+        unsigned stackPointer = 0;
+        token current;                      // used as current token
+        string fileName;                    // store source file name
+
+        bool frenchEnabled = false;         // switch error messages to french
+        unsigned tagNumber = 0;             // used to differenciate labels generation
 
     public:
-        // assemble instructions
-        bool compile( string file_name );
+        // compile to basal assembly
+        void compile( string file_name );
     
     private:
 
         // better error message for compilation
         void throwCompileError( string error_message );
+        // throw and output a simple error, without source code, useful for error outside compilation 
+        // example : source file not found for example
+        void throwSimpleError( string error_message );
+
+        // Call throwCompileError if incompatible types 
+        void checkOperandTypes( Type type1, string OP, Type type2 );
+
+        // helper function to generate basm instructions
+        string getInstrFromADDorMUL( string op );
 
         // increment j and reassign token t
         bool readToken( void );
@@ -61,23 +72,26 @@ namespace basal   // keep things contained in a namespace.  basm = Basal Assembl
         // parse decimals, binary and hexadecimal values
         uint16_t parseValue( void ); 
 
-        // parse characters
-        char parseCharValue( void );
-
         // get one token from a string already split 
         void tokenizeOneLine( const string& line );
 
         // load a file and tokenize it
-        bool loadAndTokenize( string );
+        void loadAndTokenize( string );
 
         // look at a token and redirect toward the appropriatre function, eg : ADD -> call parseAddBasedInstr()     
         bool parseOneInstr( void );
 
         // Expr := SimpleExpr [ RelationalOperator SimpleExpr ]
-        void parseExpression( void );
+        Type parseExpression( void );
 
         // SimpleExpression := Term { additiveOperator Term }
-        void parseSimpleExpression( void );
+        Type parseSimpleExpression( void );
+
+        // Term := Factor { additiveOperator Factor }
+        Type parseTerm( void );
+
+        // Factor := number | identifier | "(" Expression ")"
+        Type parseFactor( void );
 
     };
 }

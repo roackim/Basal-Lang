@@ -30,7 +30,14 @@ int main( int argc, char *argv[] )
 
     // Instanciate Assambler, assemble instructions
     basal::Compiler compiler;
-    bool s = compiler.compile( file );
+
+    try // try to compile
+    { 
+        compiler.compile( file );
+    } catch( const std::exception& e )
+    {
+        cout << "An Error has occured during compilation" << endl;
+    }
 
     // end chrono
     auto end = std::chrono::high_resolution_clock::now();
@@ -38,24 +45,18 @@ int main( int argc, char *argv[] )
     if( DISP_TIME ) 
         cout << "Assembled in " << elapsed.count() << " ms\n";
 
+    cout << "Program:" << endl << compiler.program.str() << endl;
     for( uint32_t i=0; i<compiler.tokens.size(); i++)
     {
         if( compiler.tokens[i].type == basal::ENDL )
         {
             cout << endl;
         }
-        else
-            //cout << basal::getTokenTypeStr( compiler.tokens[i].type ) << " ";
             cout << compiler.tokens[i].text << "|";
+            cout << basal::getTokenTypeStr( compiler.tokens[i].type ) << ", ";
+
     }
 
-
-    // terminate program if assemble returned false
-    if( s == false )
-    {
-        cerr << "A problem has occured while compiling file '" << file << "'." << endl;
-        exit( -1 );
-    }
 
     return 0;
 }

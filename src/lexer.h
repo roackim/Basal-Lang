@@ -14,11 +14,17 @@ namespace lexer
     // uppercase a string, allow for non-case-sensitive OP 
     string to_upper( string s );
 
-    // return true if the string is a basal operator
-    bool matchOP( string op );
+    // return true if the string is a basal additive operator
+    bool matchADDOP( string op );
+
+    // return true if the string is a basal additive operator
+    bool matchMULOP( string op );
 
     // return true if the string is a basal relationnal operator
-    bool matchRelOP( string op );
+    bool matchRELOP( string op );
+
+    // return true if the string is a basal operator
+    bool matchOP( string op );
 
     // return true if the string is a basal keyword
     bool matchKEYWORD( string op );

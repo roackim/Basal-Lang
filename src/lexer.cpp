@@ -34,18 +34,32 @@ namespace lexer
         }
         return low;
     }
+    
+    // return true if the string is a basal additive operator
+    bool matchADDOP( string op )
+    {
+        string up = to_upper( op );
+        return( op=="+" or op=="-" or up=="OR" or up=="OU" );
+    }
+
+    // return true if the string is a basal additive operator
+    bool matchMULOP( string op )
+    {
+        string up = to_upper( op );
+        return( op=="*" or op=="/" or op=="^" or op=="%" or up=="AND" or up=="ET");
+        
+    }
+
+    // return true if the string is a basal relationnal operator
+    bool matchRELOP( string op )
+    {
+        return( op=="==" or op=="<" or op==">" or op==">=" or op=="<=" or op=="!=" );
+    }
 
     // return true if the string is a basal operator
     bool matchOP( string op )
     {
-        return( op=="="  or op=="==" or op=="<"   or op==">" or op==">=" or op=="<=" or op=="!=" 
-             or op=="+"  or op=="-" or op=="/"   or op=="*"   or op=="^"  or op=="%" );
-    }
-
-    // return true if the string is a basal relationnal operator
-    bool matchRelOP( string op )
-    {
-        return( op=="==" or op=="<" or op==">" or op==">=" or op=="<=" or op=="!=" );
+        return( matchADDOP( op ) or matchMULOP( op ) or matchRELOP( op ) );
     }
 
     // return true if the string is a basal keyword
@@ -304,8 +318,9 @@ namespace lexer
         else if( txt == "{" ) type = LBRACES;
         else if( txt == "}" ) type = RBRACES;
         else if( txt == "var" or txt == "bin" or txt == "array" or txt == "tableau" ) type = KEYWORD;         // try to display types 
-        else if( matchRelOP( txt ))         type = RELOP;           // try to match relationnal operators
-        else if( matchOP( txt ))            type = OP;              // try to match operators
+        else if( matchRELOP( txt ))         type = RELOP;           // try to match relationnal operators
+        else if( matchADDOP( txt ))         type = ADDOP;           // try to match additive operators
+        else if( matchMULOP( txt ))         type = MULOP;           // try to match additive operators
         else if( matchRESERVED( txt ))      type = RESERVED;        // try to match reserved functions
         else if( matchKEYWORD( txt ))       type = KEYWORD;         // try to match basal keywords
         else if( matchDecimalValue( txt ))  type = DECIMAL_VALUE;   // try to match decimal values

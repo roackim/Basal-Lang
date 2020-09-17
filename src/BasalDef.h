@@ -12,7 +12,8 @@ namespace basal
     enum TokenType   // types of tokens
     {
         IDENTIFIER,         // identifier
-        OP,                 // operator
+        ADDOP,              // additive operator
+        MULOP,              // multiplicative operator 
         RELOP,              // relationnal operator
         KEYWORD,            // keyword
         RESERVED,           // reserved functions
@@ -37,8 +38,7 @@ namespace basal
     enum Type   // basal types // TODO add more types ?
     {
         INT,
-        BIN,
-        UNKNOWN
+        BIN
     };
 
     // helper function, allow to get string from enum

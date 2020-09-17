@@ -19,49 +19,51 @@ namespace basal
             case 0:
                 return "identifier";
             case 1:
-                return "op";
+                return "add_op";
             case 2:
-                return "relationnal_operator";
+                return "mul_op";
             case 3:
-                return "keyword";
+                return "rel_op";
             case 4:
-                return "reserved_identifier";
+                return "keyword";
             case 5:
-                return "quotes";
+                return "reserved_identifier";
             case 6:
-                return "comma";
+                return "quotes";
             case 7:
-                return "ampersand";
+                return "comma";
             case 8:
-                return "lparen";
+                return "ampersand";
             case 9:
-                return "rparen";
+                return "lparen";
             case 10:
-                return "lbracket";
+                return "rparen";
             case 11:
-                return "rbracket";
+                return "lbracket";
             case 12:
-                return "lbraces";
+                return "rbracket";
             case 13:
-                return "rbraces";
+                return "lbraces";
             case 14:
-                return "decimal_value";
+                return "rbraces";
             case 15:
-                return "hexa_value";
+                return "decimal_value";
             case 16:
-                return "binary_value";
+                return "hexa_value";
             case 17:
-                return "end of line";
+                return "binary_value";
             case 18:
-                return "end of file";
+                return "end_of_line";
             case 19:
-                return "string";
+                return "end_of_file";
             case 20:
-                return "spaces";
+                return "string";
             case 21:
+                return "spaces";
+            case 22:
                 return "unkown";
             default:
-                return "unkown bis";
+                return "unkown_bis";
         }
         return "ERROR";
     }

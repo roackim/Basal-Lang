@@ -9,38 +9,33 @@
 namespace basal
 {
     // compile basal file to basal assembly
-    bool Compiler::compile( string file_name )
+    void Compiler::compile( string file_name )
     {
         this->fileName = file_name;
-        if( !loadAndTokenize( fileName )) // error while tokenizing
-            return false;
+        try
+        {
+            loadAndTokenize( fileName ); // error while tokenizing
+        } catch( const std::exception& e )
+        {
+            return; // stop compilation
+        }
 
-        // if( !tokens.empty() ) //  TODO change
-        // {
-        //     
-        //     while( parseOneInstr() )
-        //     {
-        //         if( !readEndl() )  // expect one instruction per line
-        //         {
-        //             break; // stop compilation
-        //         }
-        //     }         
-        //     return true;
-        // }
-        // else
-        // {
-        //     cerr << "/!\\ Error while assembling : No instruction found in file '" << fileName << "'." << endl;
-        //     return false;
-        // }
-        return true;
+
+        if( !tokens.empty() ) //  TODO change
+        {
+            current = tokens[j];
+            while( current.type == ENDL ) readToken();
+
+            parseExpression(); // parse an expression
+        }
     }
 
-    // better error message for compilation
+    // throw and output a comprehensible error message, throw a runtime_error
     void Compiler::throwCompileError( string error_message )
     {
         // find token number in the line
-        unsigned i = this->j;
-        if( current.type == ENDL ) i--;
+        unsigned i = j;
+        if( current.type == ENDL and j != 0 ) i--;
         while( tokens[ i ].type != ENDL ) i--;
         i = j - i; // get diff
 
@@ -84,22 +79,70 @@ namespace basal
             else if( x == mid ) mess += "^";
         }
 
-        if( frenchMessages )
-            std::cout << "Erreur de compilation, ligne ";
-        else if( not frenchMessages )
-            std::cout << "Compile error, line "; 
-        std::cout << lineNbr << "\n -> " << error_message << "\n    " << mess << std::endl;
+        if( frenchEnabled )
+            std::cerr << "Erreur de compilation, ligne ";
+        else if( not frenchEnabled )
+            std::cerr << "Compile error, line "; 
 
-        encounteredError = true;    // stop the compilation process
+        std::cerr << lineNbr << "\n -> " << error_message << "\n    " << mess << std::endl;
+        throw std::runtime_error( error_message );
     }
 
+    // throw and output a simple error, without source code, useful for error outside compilation 
+    // example : source file not found for example
+    void Compiler::throwSimpleError( string error_message )
+    {
+        if( frenchEnabled )
+            std::cerr << "Erreur lors de la compilation:";
+        else if( not frenchEnabled )
+            std::cerr << "Error encountered during compilation:"; 
+        std::cerr << "\n -> " << error_message << endl;
+        throw std::runtime_error( error_message );
+    }
+
+
+    // Call throwCompileError if incompatible types 
+    void Compiler::checkOperandTypes( Type type1, string OP, Type type2 )
+    {
+        string op = lexer::to_upper( OP );
+        if( op=="+" or op=="-" or op=="*" or op=="/" or op=="^" or op=="%" ) // var operands expected
+        {
+
+        }
+        else if( op=="OR" or op=="OU" or op=="AND" or op=="ET" ) // bin operands expected
+        {
+            if( type1 != BIN or type2 != BIN )
+            {
+                string message = "";
+                if( frenchEnabled ) message = "Types incompatibles avec l'operateur '" + OP + "'";
+                else if( not frenchEnabled ) message = "Incompatible types with operator '" + OP + "'";
+                throwCompileError( message );
+            }
+        }
+    }
+
+    // helper function to generate basm instructions
+    string Compiler::getInstrFromADDorMUL( string op )
+    {
+        op = lexer::to_upper( op );
+        if     ( op=="+" ) return "add ";
+        else if( op=="-" ) return "sub "; 
+        else if( op=="*" ) return "mul ";
+        else if( op=="/" ) return "div ";
+        else if( op=="^" ) return "pow ";
+        else if( op=="%" ) return "mod ";
+        else if( op=="AND" or op=="ET" ) return "and ";
+        else if( op=="OR"  or op=="OU" ) return "or  ";
+        else
+            throwSimpleError("Should no happen: error in getInstrFromADDorMUL()");
+    }
 
     // increment j and reassign token t
     bool Compiler::readToken( void )
     {
         if( j < tokens.size() - 2 )
         {    
-            current = tokens[ ++j ];
+            current = tokens[ ++j ]; // go to next token
             return true;         
         }
         else
@@ -120,7 +163,7 @@ namespace basal
         }
         else
         {
-            compileError("Expected End of line after instruction");
+            throwCompileError("Expected End of line after instruction");
             return false;
         }
     }
@@ -135,7 +178,7 @@ namespace basal
         }
         else
         {
-            compileError("Expected a comma, not '" + current.text + "'");
+            throwCompileError("Expected a comma, not '" + current.text + "'");
             return false;
         }
     }
@@ -149,8 +192,7 @@ namespace basal
             int32_t i = atoi( value.c_str() );
             if( i > 65535 or i < -32768 )
             {
-                compileError( "Value '" + current.text + "' is too big to be encoded.\n\trange: [0, 65535] or [-32768, 32767]" );
-                return false;
+                throwCompileError( "Value '" + current.text + "' is too big to be encoded.\n\trange: [0, 65535] or [-32768, 32767]" );
             }
             readToken();
             return static_cast<uint16_t>( i );
@@ -160,8 +202,7 @@ namespace basal
             value = value.substr( 2, value.length() - 1 ); // remove the base before number eg : 0b0101 -> 0101
             if( value.length() > 16 )
             {
-                compileError( "Value '" + current.text + "' is too big to be encoded.\n\trange: [0, 65535] or [-32768, 32767]" );
-                return false;
+                throwCompileError( "Value '" + current.text + "' is too big to be encoded.\n\trange: [0, 65535] or [-32768, 32767]" );
             }
             long int i = std::stol( value.c_str(), nullptr, 2);
             readToken();
@@ -172,79 +213,14 @@ namespace basal
             value = value.substr( 2, value.length() - 1 ); // remove the base before number eg : 0b0101 -> 0101
             if( value.length() > 4 )
             {
-                compileError( "Value '" + current.text + "' is too big to be encoded.\n\trange: [0, 65535] or [-32768, 32767]" );
-                return false;
+                throwCompileError( "Value '" + current.text + "' is too big to be encoded.\n\trange: [0, 65535] or [-32768, 32767]" );
             }
             long int i = std::stol( value.c_str(), nullptr, 16);
             readToken();
             return static_cast<uint16_t>( i );
         }
-        compileError( "Expected a value" );
+        throwCompileError( "Expected a value" );
         return 0;
-    }
-
-    // parse char values // TODO remove ?
-    char Compiler::parseCharValue( void )
-    {
-        string s = current.text;
-        string c = "";
-
-        c += s[1];
-        if( s.length() == 3 )
-        {
-            readToken();
-            return  s[1] ;
-        }
-        if( s.length() == 4 )
-        {
-            c += s[2];
-            if     ( c == "\\n" ) 
-            {
-                readToken();
-                return '\n' ;
-            }
-            else if( c == "\\t" ) 
-            {
-                readToken();
-                return '\t' ;
-            }
-            else if( c == "\\v" ) 
-            {
-                readToken();
-                return '\v' ;
-            }
-            else if( c == "\\s" ) 
-            {
-                readToken();
-                return ' ' ;
-            }
-            else if( c == "\\," )
-            {
-                readToken();
-                return ',';
-            }
-            else if( c == "\\#" ) // avoid comment
-            {
-                readToken();
-                return '#';
-            }
-            else if( c == "\\@" ) // avoid comment
-            {
-                readToken();
-                return '@';
-            }
-            else if( c == "\\|" ) // avoid comment
-            {
-                readToken();
-                return '|';
-            }
-            else 
-            {
-                readToken();
-                return s[3];
-            }
-        }
-        return '?' ; // unknown character
     }
 
     // tokenize a split line  ( called after lexer::splitLine )
@@ -255,11 +231,12 @@ namespace basal
         {
             token t = lexer::tokenizeOneWord( words[i] );
             tokens.push_back( t );
+            // cout << tokens.size() << " -> " << t.text << endl;
         }
     }
 
     // load a file and tokenize it
-    bool Compiler::loadAndTokenize( string file )
+    void Compiler::loadAndTokenize( string file )
     {
 
         char line[120];    // char * used to store line
@@ -278,15 +255,14 @@ namespace basal
         else // File hasn't been opened
         {
             rfile.close();
-            cerr << "/!\\ Error while compiling : Cannot open file '" << fileName << "'." << endl;
-            exit(-1);
-            return false;
+            string message = "Cannot open file '" + fileName + "'" ;
+            if( frenchEnabled ) message = "Impossible d'ouvrir le fichier '" + fileName + "'" ;
+            throwSimpleError( message );
 
         }
         rfile.close();
         token last_token("STOP", STOP); 
         tokens.push_back( last_token );
-        return true;
     }
 
     // parse one instruction from the token array
@@ -317,16 +293,18 @@ namespace basal
         if( current.type == RELOP )
         {
             type = BIN;
-            program << "    pop ax" << endl;
+            program << "    pop  ax" << endl;
             program << ":CMP_" << tagNumber << endl;
 
-            string txt = current.text; // buffer
-
+            string txt = current.text; // buffer current operator 
+ 
             readToken(); // read relationnal operator
             parseSimpleExpression();
 
-            program << "    pop bx" << endl;
-            program << "    cmp ax, bx" << endl;
+            tagNumber++;
+
+            program << "    pop  bx" << endl;
+            program << "    cmp  ax, bx" << endl;
 
             if( txt == "==" )
             {
@@ -334,27 +312,32 @@ namespace basal
             }
             else if( txt == "!=" )
             {
-
+                program << "    jump CMP_TRUE_" << tagNumber << " ifnot EQU" << endl;
             }
             else if( txt == ">" )
             {
-
+                program << "    jump CMP_TRUE_" << tagNumber << " if NEG" << endl;
             } 
             else if( txt == "<" )
             {
-
+                program << "    jump CMP_TRUE_" << tagNumber << " if POS" << endl;
             }
             else if( txt == "<=" )
             {
-
+                program << "    jump CMP_TRUE_" << tagNumber << " if EQU" << endl;
+                program << "    jump CMP_TRUE_" << tagNumber << " if POS" << endl;
             }
             else if( txt == ">=" )
             {
-
+                program << "    jump CMP_TRUE_" << tagNumber << " if EQU" << endl;
+                program << "    jump CMP_TRUE_" << tagNumber << " if NEG" << endl;
             }
-            readToken(); // read relationnal operator
-            parseSimpleExpression();
-            add("   pop bx"); // second operand
+            program << ":CMP_FALSE_" << tagNumber << endl;
+            program << "    push 0" << endl;
+            program << "    jump CPM_END_" << tagNumber << endl;
+            program << ":CMP_TRUE_" << tagNumber << endl;
+            program << "    push 1" << endl;
+            program << ":CMP_END_" << tagNumber << endl;
         }
     
         return type;
@@ -363,20 +346,115 @@ namespace basal
     // SimpleExpression := Term { additiveOperator Term }
     Type Compiler::parseSimpleExpression( void )
     {
+        Type type = parseTerm();
 
-        return INT;
+        while( current.type == ADDOP )
+        {
+            string op = lexer::to_upper( current.text );
+            readToken();
+            
+            Type type2 = parseTerm();
+
+            string instr = getInstrFromADDorMUL( op );
+            program << "    pop  ax" << endl;   // right operand
+            program << "    pop  bx" << endl; 
+            program << "    " << instr << " ax, bx" << endl;
+            program << "    push bx" << endl;
+
+            checkOperandTypes( type, op, type2 ); // doesn't account for relationnal operators
+            type = type2;
+        }
+        
+        return type;
     }
 
-    // Term := Factor { additiveOperator Factor }
+    // Term := Factor { multiplicativeOperator Factor }
     Type Compiler::parseTerm( void )
     {
+        Type type = parseFactor();
+        while( current.type == MULOP )
+        {
+            string op = lexer::to_upper( current.text );
+            readToken();
+            
+            Type type2 = parseFactor();
 
+            string instr = getInstrFromADDorMUL( op );
+            program << "    pop  ax" << endl;   // right operand
+            program << "    pop  bx" << endl; 
+            program << "    " << instr << " ax, bx" << endl;
+            program << "    push bx" << endl;
+            
+            checkOperandTypes( type, op, type2 ); // doesn't account for relationnal operators
+            type = type2;
+        }
+        
+        return type;
     }
 
     // Factor := number | identifier | "(" Expression ")"
     Type Compiler::parseFactor( void )
     {
-         
+        Type type;
+        if( current.type == DECIMAL_VALUE or current.type == HEXA_VALUE or current.type == BINARY_VALUE )
+        {
+            uint16_t value = parseValue();
+            program << "    push " << value << endl;
+            type = INT;
+
+        } 
+        else if( current.type == IDENTIFIER ) // not a declaration, identifier is used as a variable
+        {
+            throwCompileError("Identifiers are not implemented yet");
+
+            // TODO variables & functions
+            if( false ) // TODO SCOPE var declaration
+            {
+                string message;
+                if( tokens[j+1].type == LPAREN ) // identifier is a function name
+                {
+                    message = "The function '" + current.text + "' does not exists"; 
+                    if( frenchEnabled ) message = "La fonction '" + current.text + "' n'existe pas";
+                }
+                else // identifier is a variable
+                {
+                    message = "The variable '" + current.text + "' does not exists";
+                    if( frenchEnabled ) message = "La variable '" + current.text + "' n'existe pas";
+                    if( false )// variableExistInAnotherScope() // TODO // more precise error message
+                    {
+                        if( frenchEnabled ) message += " dans ce champ";
+                        else message += " in this scope";
+                    }
+                }
+                throwCompileError( message ); // throw an error, terminate compilation
+            }
+            else // function exists or variable exists in the current scope 
+            {
+                ;
+            }
+            // TODO get variable type
+            type = INT; // TODO subject to change depending on the variable type
+
+        }
+        else if( current.type == LPAREN )
+        {
+            readToken(); // read left parent
+            type = parseExpression();
+            if( current.type == RPAREN ) readToken();
+            else  // Error
+            {
+                string message = "Missing closing parenthesis";
+                if( frenchEnabled ) message = "Parenthèse fermante manquante";
+                throwCompileError( message );
+            }
+        }
+        else    // throw error
+        {
+            string message = "Unexpected token: '" + current.text + "'|" + getTokenTypeStr(current.type);
+            if( frenchEnabled ) message = "Symbole innatendu '" + current.text + "'|" + getTokenTypeStr(current.type);
+            throwCompileError( message );
+        }
+        return type;
     }
 
 
