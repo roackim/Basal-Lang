@@ -243,7 +243,7 @@ namespace lexer
                 if( tokenizeSpaces ) endWord( words, word );
                 continue;
             }
-            else if( c==',' or c=='&' or c=='(' or c==')' or c=='[' or c==']' or c=='{' or c=='}' or c=='.' )
+            else if( c==',' or c=='&' or c=='(' or c==')' or c=='[' or c==']' or c=='{' or c=='}' or c=='.' or c==';')
             {
                 if( quotes ) word += line[i];
                 else

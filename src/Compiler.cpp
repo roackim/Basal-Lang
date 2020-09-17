@@ -722,7 +722,7 @@ namespace basal
                 program << "# ELSE " << endl;
 
                 word = lexer::to_upper( current.text );
-                while( word != "END" and word != "FIN" )
+                while( word != "END" and word != "FIN" and current.type != STOP  )
                 {
                     parseStatement();
                     readEndl();
@@ -735,17 +735,17 @@ namespace basal
         }
 
         word = lexer::to_upper( current.text );
-        if( word == "END" or word == "FIN" ) readToken();
-        else
+        if( word != "END" and word != "FIN" )         
         {
             string mess = "Keyword 'END' expected after IF statement" ;
-            if( frenchEnabled ) mess = "Mot clef 'ALORS' attendu après bloc SI" ;
+            if( frenchEnabled ) mess = "Mot clef 'FIN' attendu après bloc SI" ;
             throwCompileError( mess ); 
         }
 
-        program << ":IF_" << tag << "_END" << endl;
+        readToken(); // read END
 
-        
+        program << "#########" << endl;
+        program << ":IF_" << tag << "_END" << endl;
 
     }
 
