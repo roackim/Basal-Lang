@@ -1,0 +1,71 @@
+## New Basal Grammar
+
+    Program := { Statement ENDL }
+
+    Statement := IfStatement 
+           | WhileStatement 
+           | ForStatement 
+           | ReservedFunction
+           | AssignementStatement
+           | DeclarationStatement
+
+	AssignementStatement := Identifier "=" Expression
+	Identifier := Letter {(Letter|Digit|_)}
+    
+    DeclarationStatement := (var|bin) Identifier ["=" Expression]
+
+
+    Expression := SimpleExpression [RelationalOperator SimpleExpression]
+	SimpleExpression := Term {AdditiveOperator Term}
+	Term := Factor {MultiplicativeOperator Factor}
+	Factor := Number | Identifier | "(" Expression ")"| ReservedFunction	
+    Number := (\-)?{digit}+|True|False|(\-)?{digit}+\.{digit}+
+	Identifier := Letter { (Letter|Digit) }
+
+	AdditiveOperator := "+" | "-" | "OR"
+	MultiplicativeOperator := "*" | "/" | "%" | "AND"
+	RelationalOperator := "==" | "!=" | "<" | ">" | "<=" | ">="
+	Digit := "0"|"1"|"2"|"3"|"4"|"5"|"6"|"7"|"8"|"9"
+	Letter := "a"|...|"z"
+
+
+
+## Old Basal Grammar
+
+	Program := [DeclarationPart] StatementPart
+	DeclarationPart := "VAR" { DeclarationSubPart }
+	DeclarationSubPart := Type ":" ID { "," ID } ";"
+	Type = BOOL|INT|FLOAT
+	
+	StatementPart := "START" { Statement } "STOP"
+	Statement := IfStatement 
+	           | WhileStatement 
+	           | ForStatement 
+	           | BlockStatement 
+	           | ReservedFunction ";" 
+	           | AssignementStatement ";"
+	
+	ReservedFunction := CallDISP | CallABS | CallSIN | CallCOS | CallSQRT | CallCHOP | CallROUND
+	AssignementStatement := Identifier ":=" Expression
+
+	IfStatement := "IF" Expr "THEN" Statement { "ELSIF" Expr "THEN" Statement } [ "ELSE" Statement ]
+	WhileStatement := "WHILE" Expr "DO" Statement
+	ForStatement := "FOR" assignementStatement "TO" expr2 "DO" Statement
+	BlockStatement := "BEGIN" { Statement } "END"
+	
+	DispCall := "DISP" "(" Expr {"," expr} ")"
+	
+	Expr := SimpleExpression [RelationalOperator SimpleExpression]
+	SimpleExpression := Term {AdditiveOperator Term}
+	Term := Factor {MultiplicativeOperator Factor}
+	Factor := Number | Identifier | "(" Expression ")"| ReservedFunction | StringConst
+	
+	StringConst := \"[A-Za-z0-9 \\\(\)\<\>\=\!\%\&\|\}\-\:\;\.]*\"
+	Number := (\-)?{digit}+|True|False|(\-)?{digit}+\.{digit}+
+	Identifier := Letter { (Letter|Digit) }
+
+	AdditiveOperator := "+" | "-" | "OR"
+	MultiplicativeOperator := "*" | "/" | "%" | "AND"
+	RelationalOperator := "==" | "!=" | "<" | ">" | "<=" | ">="
+	Digit := "0"|"1"|"2"|"3"|"4"|"5"|"6"|"7"|"8"|"9"
+	Letter := "a"|...|"z"
