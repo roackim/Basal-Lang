@@ -915,16 +915,19 @@ namespace basal
 
         accessVar( var );
 
+        program << "    pop  bx" << endl;
+        program << "    add  bx, (ax)" << endl; 
+
         if( decl_def ) exitScope();
 
         program << endl;
         program << "    jump FOR_" << tag << "_LOOP" << endl;
 
         program << ":FOR_" << tag << "_INCR" << endl; 
-        program << "    add  1, (ax)" << endl;
+        program << "    push 1" << endl;
         program << "    jump FOR_" << tag << "_BODY"   << endl; 
         program << ":FOR_" << tag << "_DECR" << endl; 
-        program << "    sub  1, (ax)" << endl;
+        program << "    push -1" << endl;
         program << "    jump FOR_" << tag << "_BODY"   << endl;
 
         program << ":FOR_" << tag << "_END" << endl; 
