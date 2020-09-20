@@ -664,15 +664,7 @@ namespace basal
         }
 
         program << endl;
-        program << "# start of assignement to var: " << var.name << endl;
-        program << "    copy fx, ax" << endl;
-        unsigned d = var.depth;
-        while( d != 0 ) // access previous scopes if necessary
-        {
-            program << "    copy (ax), ax" << endl;
-            d--;
-        }
-        program << "    add  " << var.offset << ", ax" << endl;
+        accessVar( var );
         program << "    pop  bx" << endl;
         program << "    copy bx, (ax)" << endl;
         program << "# end of assignement to var: " << var.name << endl;
@@ -827,10 +819,13 @@ namespace basal
 
         unsigned index_buff = j;
 
+        bool decl_def = false;  // true if declaring variable in the for ex: for var h=0 until 100:
+                                //                                               ^^^
         if( current.type == TYPE )
         {
             parseVarDeclaration();
             var_loop = prev_assigned_var;
+            decl_def = true;
         }
         else if( current.type == IDENTIFIER and tokens[j+1].type == EQU )
         {
@@ -840,6 +835,7 @@ namespace basal
         else if( current.type == IDENTIFIER )
         {
             parseFactor();
+            program << "    pop" << endl;
             var_loop = prev_used_var;
         }
 
@@ -862,8 +858,14 @@ namespace basal
         }
         readToken();
 
+        // code gen
+
+        program << endl;
+        program << "# For loop " << endl;
+        program << ":FOR_" << tag << "_LOOP" <<  endl; 
+
         index_buff = j;
-        Type type = parseExpression();
+        Type type = parseExpression(); // target value is push on the stack
         if( type == BIN )
         {
             j = index_buff;
@@ -883,6 +885,25 @@ namespace basal
         readToken(); // read ':'
         readEndl();
 
+        program << "    pop  bx     # target value in for loop" << endl;
+
+        if( decl_def ) createScope();
+
+        var = currentScope->getVar( var_loop );
+
+        // code gen 
+
+        accessVar( var ); // put var_loop address in ax
+        
+        program << endl;
+        program << "    cmp  (ax), bx     # for loop comparison" << endl;
+        program << "    jump FOR_" << tag << "_END  if EQU"   << endl; 
+        program << "    jump FOR_" << tag << "_INCR if POS"   << endl; 
+        program << "    jump FOR_" << tag << "_DECR if NEG"   << endl << endl; 
+        
+        program << "# for body" << endl;
+        program << ":FOR_" << tag << "_BODY" << endl; 
+
         word = lexer::to_upper( current.text );
         while( word != "END" and word != "FIN" )
         {
@@ -891,6 +912,26 @@ namespace basal
 
             word = lexer::to_upper( current.text );
         }
+
+        accessVar( var );
+
+        if( decl_def ) exitScope();
+
+        program << endl;
+        program << "    jump FOR_" << tag << "_LOOP" << endl;
+
+        program << ":FOR_" << tag << "_INCR" << endl; 
+        program << "    add  1, (ax)" << endl;
+        program << "    jump FOR_" << tag << "_BODY"   << endl; 
+        program << ":FOR_" << tag << "_DECR" << endl; 
+        program << "    sub  1, (ax)" << endl;
+        program << "    jump FOR_" << tag << "_BODY"   << endl;
+
+        program << ":FOR_" << tag << "_END" << endl; 
+
+        exitScope();
+
+
 
         word = lexer::to_upper( current.text );
         if( word != "END" and word != "FIN" )         
@@ -921,7 +962,7 @@ namespace basal
         }
         else if( current.type == RESERVED_FUNC )
         {
-            if( word == "DISP" or word == "AFFICHER" ) parseDISP();
+            if( word == "PRINT" or word == "IMPR" or word == "IMPRIMER" ) parseDISP();
         }
         else if( current.type == IDENTIFIER ) parseAssignement();
         else if( current.type == STOP ) return false;
@@ -968,19 +1009,67 @@ namespace basal
         }
     }
 
+    // put the addess of the var in ax register
+    void Compiler::accessVar( Variable var ) 
+    {
+        program << "# Accessing var: " << var.name << endl;
+        program << "    copy fx, ax" << endl;
+        unsigned d = var.depth;
+        while( d != 0 ) // access previous scopes if necessary
+        {
+            program << "    copy (ax), ax" << endl;
+            d--;
+        }
+        program << "    add  " << var.offset << ", ax" << endl;
+    }
+
     // display function
     void Compiler::parseDISP( void )
     {
-        readToken();
+        readToken(); // read disp
+
         if( current.type == QUOTES )
         {
-            readToken();
-            unsigned s = current.text.length(); 
+            readToken(); // read quotes
+
+            if( current.type == STRING )
+
             program << endl;
             program << "# displaying immediate string " << endl;
-            for( unsigned i=0; i<s; i++ )
+            bool esc = false;
+            for( unsigned i=0; i<current.text.length(); i++ )
             {
-                program << "    disp '" << current.text[i] << "', char" << endl;
+                char c = current.text[i];
+                string s{ c };
+                if( c == '\\' )
+                {
+                    if( esc ) // already escaped
+                    {
+                        esc = false;
+                        program << "    disp " << static_cast<uint16_t>( '\\' ) << " \t, char";
+                        program << "    # disp '\\'" << endl;
+                        continue;
+                    }
+                    esc = not esc;     
+                    if( esc ) // if result is 
+                        continue; // skip escaping char '\'
+                }
+                else
+                {
+                    if( esc )
+                    {
+                        if     ( c == 'n'  ) c = '\n';
+                        program << "    disp " << static_cast<uint16_t>( c ) << " \t, char";
+                        program << "    # disp '\\" << current.text[i] << "'" << endl;
+                        esc = false;
+                    }
+                    else
+                    {
+                        program << "    disp " << static_cast<uint16_t>( c ) << " \t, char";
+                        program << "    # disp '" << c << "'" << endl;
+                    }
+                }
+
             }
             readToken();
             if( current.type != QUOTES )

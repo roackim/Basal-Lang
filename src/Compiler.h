@@ -124,6 +124,9 @@ namespace basal   // keep things contained in a namespace.  basm = Basal Assembl
         // quit the current scope, both in assembly and in the compiler 
         void exitScope( void );
 
+        // put the addess of the var in ax register
+        void accessVar( Variable var ) ;
+
         // display function
         void parseDISP( void );
 

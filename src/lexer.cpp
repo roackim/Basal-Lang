@@ -89,7 +89,7 @@ namespace lexer
     bool matchRESERVED_FUNC( string op )
     {
         op = to_upper( op ); // non case sensitive op 
-        return( op=="DISP" or op=="AFFICHER");  
+        return( op=="PRINT" or op=="IMPR" or op=="IMPRIMER");  
     }
 
     // return true if strign literal for boolean
@@ -227,7 +227,7 @@ namespace lexer
 
         bool esc = false; // true if the previous char was '\'
         bool quotes = false; // wether or not the current char is part of a quotation ex: DISP("HelloWorld!")
-                             //                                                                       ^--------- quotes would be true here 
+                             //                                                                       ^---- quotes would be true here 
         for( uint32_t i=0; i < line.length(); i++) // every char of the string
         {
             char c = line[i];
@@ -241,13 +241,15 @@ namespace lexer
                     word += line[i];
                     endWord( words, word );
                 }
-                else 
+                else if( esc ) 
                     word += line[i];
+                esc = false;
                 continue;
             }
             else if( quotes == true and c != '\\' )
             {
                 word += line[i];
+                esc = false;
                 continue;
             }
             else if( isSpace( line[i]) and quotes == false )
@@ -260,6 +262,7 @@ namespace lexer
                     i++;    
                 }
                 if( tokenizeSpaces ) endWord( words, word );
+                esc = false;
                 continue;
             }
             else if( c==',' or c=='&' or c=='(' or c==')' or c=='[' or c==']' or c=='{' or c=='}' or c=='.' or c==';' or c==':')
@@ -271,6 +274,7 @@ namespace lexer
                     word += line[i];
                     endWord( words, word );
                 }
+                esc = false;
                 continue;
             }
             else if( line[i] == '#') // discard the rest of the line if the char is not escaped
@@ -279,18 +283,16 @@ namespace lexer
                 else 
                 { 
                     endWord( words, word );
+                    esc = false;
                     break;      // stop processing the line
                 }
+                esc = false;
                 continue;
             }
             else if( line[i] == '\\' ) 
             {
-                if( esc == false ) esc = true;       // chain escapement ex : DISP("\\\\")
-                else if( esc == true )
-                {
-                    word += line[i];
-                    esc = false;
-                } 
+                esc = not esc;
+                word += line[i];
             }
             else if( matchOneLetterOP( c ) and not quotes)
             {
@@ -314,6 +316,7 @@ namespace lexer
                     endWord( words, word );
                     continue;
                 }
+                esc = false;
             }
             else // default case
             { 

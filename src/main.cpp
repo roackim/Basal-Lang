@@ -9,7 +9,8 @@ using std::cin ;
 using std::cerr;
 using std::endl;
 
-const bool DISP_TIME = true;
+const bool DISP_TIME   = false;
+const bool DISP_TOKENS = false;
 
 int main( int argc, char *argv[] )
 {
@@ -58,7 +59,6 @@ int main( int argc, char *argv[] )
     if( DISP_TIME ) 
         cout << "Compiled  in " << elapsed.count() << " ms" << endl;
 
-
     std::ofstream outfile( out );
     outfile << ":Program" << endl;
     outfile << "    disp 10, char" << endl;
@@ -70,17 +70,19 @@ int main( int argc, char *argv[] )
 
     // cout << "Program:" << endl << compiler.program.str() << endl;
 
-    for( uint32_t i=0; i<compiler.tokens.size(); i++)
-    {
-        if( compiler.tokens[i].type == basal::ENDL )
+    if( DISP_TOKENS )
+    {    
+        for( uint32_t i=0; i<compiler.tokens.size(); i++)
         {
-            cout << endl;
+            if( compiler.tokens[i].type == basal::ENDL )
+            {
+                cout << endl;
+            }
+                cout << "[" << compiler.tokens[i].text << "|";
+                cout << basal::getStringFromTokenType( compiler.tokens[i].type ) << "] ";
         }
-            cout << compiler.tokens[i].text << "|";
-            cout << basal::getStringFromTokenType( compiler.tokens[i].type ) << ", ";
+        cout << endl;
     }
-    cout << endl;
-
 
     return 0;
 }
