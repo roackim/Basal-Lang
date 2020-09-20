@@ -72,9 +72,10 @@ namespace lexer
     // return true if the string is a basal keyword
     bool matchKEYWORD( string op )
     {
-        return( op=="FUNCTION" or op=="FONCTION" or op=="RETURN" 
-             or op=="RENVOYER" or op=="END" or op=="FIN" or op=="IF" or op=="SI" or op=="THEN" or op=="ALORS"  or op=="ELSE" or op=="SINON"
-             or op=="FOR" or op=="POUR" or op=="UNTIL" or op=="JUSQUA" or op=="DO" or op=="FAIRE" or op=="WHILE" or op == "TANTQUE" );
+        op = to_upper( op );
+        return( op=="FUNCTION" or op=="FONCTION" or op=="RETURN" or op=="RENVOYER" or 
+                op=="END" or op=="FIN" or op=="IF" or op=="SI" or op=="THEN" or op=="ALORS"  or op=="ELSE" or op=="SINON"
+             or op=="FOR" or op=="POUR" or op=="UNTIL" or op=="JUSQUE" or op=="DO" or op=="FAIRE" or op=="WHILE" or op == "TANTQUE" );
     }
 
     // return true if the string is a basal type
@@ -224,14 +225,32 @@ namespace lexer
         vector<string> words;
         string word = "";
 
-        bool Esc = false; // true if the previous char was '\'
+        bool esc = false; // true if the previous char was '\'
         bool quotes = false; // wether or not the current char is part of a quotation ex: DISP("HelloWorld!")
                              //                                                                       ^--------- quotes would be true here 
         for( uint32_t i=0; i < line.length(); i++) // every char of the string
         {
             char c = line[i];
 
-            if( isSpace( line[i]) and quotes == false )
+            if( c == '\"' )
+            {
+                if( not esc )
+                {
+                    endWord( words, word ); 
+                    quotes = not quotes;
+                    word += line[i];
+                    endWord( words, word );
+                }
+                else 
+                    word += line[i];
+                continue;
+            }
+            else if( quotes == true and c != '\\' )
+            {
+                word += line[i];
+                continue;
+            }
+            else if( isSpace( line[i]) and quotes == false )
             {    
                 endWord( words, word );
                 if( tokenizeSpaces ) word += line[i];
@@ -243,7 +262,7 @@ namespace lexer
                 if( tokenizeSpaces ) endWord( words, word );
                 continue;
             }
-            else if( c==',' or c=='&' or c=='(' or c==')' or c=='[' or c==']' or c=='{' or c=='}' or c=='.' or c==';')
+            else if( c==',' or c=='&' or c=='(' or c==')' or c=='[' or c==']' or c=='{' or c=='}' or c=='.' or c==';' or c==':')
             {
                 if( quotes ) word += line[i];
                 else
@@ -254,22 +273,9 @@ namespace lexer
                 }
                 continue;
             }
-            else if( line[i] == '\"' )
-            {
-                if( not Esc )
-                {
-                    endWord( words, word ); 
-                    quotes = not quotes;
-                    word += line[i];
-                    endWord( words, word );
-                }
-                else 
-                    word += line[i];
-                continue;
-            }
             else if( line[i] == '#') // discard the rest of the line if the char is not escaped
             {
-                if( Esc ) word += line[i]; // continue normally
+                if( esc ) word += line[i]; // continue normally
                 else 
                 { 
                     endWord( words, word );
@@ -277,13 +283,13 @@ namespace lexer
                 }
                 continue;
             }
-            if( line[i] == '\\' ) 
+            else if( line[i] == '\\' ) 
             {
-                if( Esc == false ) Esc = true;       // chain escapement ex : DISP("\\\\")
-                else if( Esc == true )
+                if( esc == false ) esc = true;       // chain escapement ex : DISP("\\\\")
+                else if( esc == true )
                 {
                     word += line[i];
-                    Esc = false;
+                    esc = false;
                 } 
             }
             else if( matchOneLetterOP( c ) and not quotes)
@@ -311,7 +317,7 @@ namespace lexer
             }
             else // default case
             { 
-                Esc = false;
+                esc = false;
                 word += line[i];
                 continue;
             }
@@ -332,6 +338,7 @@ namespace lexer
         else if( txt == "\""){ type = QUOTES; quotes = not quotes; }
         else if( txt == ";" or txt == "#" ) type = ENDL;
         else if( txt == "&" ) type = AMPERSAND;
+        else if( txt == ":" ) type = COLON;
         else if( txt == "(" ) type = LPAREN;
         else if( txt == ")" ) type = RPAREN;
         else if( txt == "[" ) type = LBRACKET;

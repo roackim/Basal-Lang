@@ -21,6 +21,7 @@ namespace basal
         QUOTES,
         COMMA,
         AMPERSAND,
+        COLON,
         LPAREN,
         RPAREN,
         LBRACKET,

@@ -11,7 +11,7 @@ namespace basal
     // default constructor of the compiler object
     Compiler::Compiler( void )
     {
-        p_scope = new Scope( nullptr ); // Global Scope
+        currentScope = new Scope( nullptr );
     }
 
     // compile basal file to basal assembly
@@ -28,7 +28,7 @@ namespace basal
 
         current = tokens[j];
 
-        while( parseStatement() ){ readEndl(); }
+        while( parseStatement() ){ readEndl(); } // require ENDL after each instructions
         
     }
 
@@ -65,9 +65,10 @@ namespace basal
 
         string source = "";
         string helper = "\n    ";
-
+        
         unsigned a=0;
-        while( lexer::isSpace( tkns[0][0] )) a++;
+        while( lexer::isSpace( tkns[a][0] )) a++;
+
         // reconstruct current line
         while( not( tkns[a] == "#" or tkns[a] == ";") )
         {
@@ -87,7 +88,6 @@ namespace basal
             }
             a++;
         }
-
         source += helper;
 
         cerr << endl;
@@ -208,7 +208,7 @@ namespace basal
         }
     }
 
-    // curent token must be a ENDL, compileError and return false otherwise
+    // current token must be a ENDL, compileError and return false otherwise
     bool Compiler::readEndl( void )
     {
         if( current.type == ENDL )
@@ -225,6 +225,25 @@ namespace basal
             return false;
         }
     }
+
+    // current token must be a colon, compileError and return false otherwise
+    bool Compiler::readColon( void )
+    {
+        if( current.type == COLON )
+        {
+            readToken();
+            return true;
+        }
+        else
+        {
+            string mess = "Expected End of line after instruction";
+            if( frenchEnabled ) mess = "Retour a la ligne attendu apres une instruction";
+            throwCompileError( mess );
+            return false;
+        }
+    }
+
+
 
     // current token must be a comma, compileError and return false otherwise
     bool Compiler::readComma( void )
@@ -260,6 +279,7 @@ namespace basal
                 throwCompileError( "Value '" + current.text + "' is too big to be encoded.\n\trange: [0, 65535] or [-32768, 32767]" );
             }
             readToken();
+            prev_value = static_cast<uint16_t>( sign*i );
             return static_cast<uint16_t>( sign*i );
         }
         else if( current.type == BINARY_VALUE )
@@ -271,6 +291,7 @@ namespace basal
             }
             long int i = std::stol( value.c_str(), nullptr, 2);
             readToken();
+            prev_value = static_cast<uint16_t>( sign*i );
             return static_cast<uint16_t>( sign*i );
         }
         else if( current.type == HEXA_VALUE )
@@ -282,6 +303,7 @@ namespace basal
             }
             long int i = std::stol( value.c_str(), nullptr, 16);
             readToken();
+            prev_value = static_cast<uint16_t>( sign*i );
             return static_cast<uint16_t>( sign*i );
         }
         throwCompileError( "Expected a value" );
@@ -418,6 +440,7 @@ namespace basal
     Type Compiler::parseTerm( void )
     {
         Type type1 = parseFactor();
+
         while( current.type == MULOP )
         {
             string op = lexer::to_upper( current.text );
@@ -481,21 +504,32 @@ namespace basal
         }
         else if( current.type == IDENTIFIER ) // not a declaration, identifier is used as a variable
         {
-            string varName = current.text;
-            Variable var = p_scope->getVar( varName );
+            string var_name = current.text;
+            Variable var = currentScope->getVar( current.text );
+            prev_used_var = var.name;
+
             // throw error if var is undelared
             if( var.type == UNDECLARED )
             {
-                string mess = "The variable '" + varName + "' doesn't exist";
-                if( frenchEnabled ) mess = "La variable '" + varName + "' n'existe pas";
+                string mess = "The variable '" + var_name + "' doesn't exist in this scope";
+                if( frenchEnabled ) mess = "La variable '" + var_name + "' n'existe pas dans ce champ";
                 throwCompileError( mess );
             }
+
             // var is declared
-            program << "# using var: " << varName << endl;
+            program << endl;
+            program << "# using var: " << var.name << endl;
             program << "    copy fx, ax" << endl;
+            unsigned d = var.depth;
+            while( d != 0 )
+            {
+                program << "    copy (ax), ax" << endl;
+                d--;
+            }
             program << "    add  " << var.offset << ", ax" << endl;
-            program << "    copy (ax), bx" << endl;
-            program << "    push bx" << endl;
+            program << "    copy (ax), ax" << endl;
+            program << "    push ax" << endl;
+            program << "# end of using var: " << var.name << endl;
 
             readToken();
             return var.type;
@@ -516,8 +550,8 @@ namespace basal
         }
         else    // throw error
         {
-            string message = "Unexpected token: '" + current.text + "'|" ;
-            if( frenchEnabled ) message = "Symbole innatendu '" + current.text + "'|" ;
+            string message = "Unexpected token: '" + current.text + "'" ;
+            if( frenchEnabled ) message = "Symbole innatendu '" + current.text + "'" ;
             throwCompileError( message );
         }
         return UNDECLARED;
@@ -542,23 +576,26 @@ namespace basal
             if( frenchEnabled ) mess = "Identifiant attendu";
             throwCompileError( mess );
         }
+
         // check if the variable has already been declared
-        string varName = current.text;
-        Variable var = p_scope->getVar( varName );
+        string var_name = current.text;
+        Variable var = currentScope->getVar( current.text );
 
         if( var.type != UNDECLARED )
         {
-            string mess = "The variable '" + varName + "' already exists";
-            if( frenchEnabled ) mess = "La variable '" + varName + "' existe déjà";
+            string mess = "The variable '" + var_name + "' already exists";
+            if( frenchEnabled ) mess = "La variable '" + var_name + "' existe déjà";
             throwCompileError( mess );
         }
 
-        p_scope->declareVar( varName, varType );
+        // might fail, hence the var_name buffer
+        prev_assigned_var = var_name;                // store the var name as the last known assigned variable
 
-        program << "# declaring var: " << varName << endl;
-        program << "    push 0 " << endl; // create variable
+        currentScope->declareVar( var_name, varType );
 
-        if( tokens[j+1].text == "=" ) parseAssignement();
+        program << "    push 0          # declaring var: " << var_name << endl;
+
+        if( tokens[j+1].type == EQU ) parseAssignement();
         else readToken(); // read identifier
 
     }
@@ -574,34 +611,48 @@ namespace basal
         }
         // we can assume current.type is an identifier
 
-        string varName = current.text;
-        Variable var = p_scope->getVar( varName );
+        string var_name = current.text;
+        Variable var = currentScope->getVar( current.text );
 
         if( var.type == UNDECLARED )
         {
-            string mess = "The variable '" + varName + "' doesn't exist";
-            if( frenchEnabled ) mess = "La variable '" + varName + "' n'existe pas";
+            string mess = "The variable '" + var_name + "' doesn't exist";
+            if( frenchEnabled ) mess = "La variable '" + var_name + "' n'existe pas";
             throwCompileError( mess );
         }
-        // we can assume the varaible has been declared
 
-        readToken();
+        prev_assigned_var = var_name;                // store the var name as the last known assigned variable
+        // we can assume the varaible has been declared
+        readToken(); // read identifier
+
         unsigned old = j;
-        if( current.text == "=" ) readToken();
+        if( current.type == EQU ) readToken(); // read '='
+        else
+        {
+            string mess = "Symbole '=' expected";
+            if( frenchEnabled ) mess = "Symbole '=' attendu";
+            throwCompileError( mess );
+        }
+
         
         Type exprType = parseExpression();
+
+        uint16_t rvalue = prev_value;
         
         if( var.type == BIN and exprType == VAR )
         {
             tagNumber++;
-            program << "# converting var to bin" << endl;
-            program << ":VAR_TO_BIN_" << tagNumber << endl;
-            program << "    cmp 0, (sp)" << endl;
-            program << "    jump VAR_TO_BIN_" << tagNumber << "_END if EQU" << endl;
-            program << "    cmp 1, (sp)" << endl;
-            program << "    jump VAR_TO_BIN_" << tagNumber << "_END if EQU" << endl;
-            program << "    copy 1, (sp)" << endl;
-            program << ":VAR_TO_BIN_" << tagNumber << "_END" << endl;
+            if( rvalue == 0 ) 
+                program << "    copy 0, (sp)" << endl;
+            else if( rvalue == 1 )              
+                program << "    copy 1, (sp)" << endl;
+            else
+            {
+                j--;
+                string mess = "Cannot assign this value to a variable of type 'bin'";
+                if( frenchEnabled ) mess = "Impossible d'assigner cette valeur a une variable de type 'bin'";
+                throwCompileError( mess );
+            }
 
         } 
         else
@@ -612,13 +663,20 @@ namespace basal
             j = curr;
         }
 
-        // [ code gen ]
-
-        program << "# assignement to var: " << varName << endl;
+        program << endl;
+        program << "# start of assignement to var: " << var.name << endl;
         program << "    copy fx, ax" << endl;
+        unsigned d = var.depth;
+        while( d != 0 ) // access previous scopes if necessary
+        {
+            program << "    copy (ax), ax" << endl;
+            d--;
+        }
         program << "    add  " << var.offset << ", ax" << endl;
         program << "    pop  bx" << endl;
-        program << "    copy bx, (ax)" << endl << endl;
+        program << "    copy bx, (ax)" << endl;
+        program << "# end of assignement to var: " << var.name << endl;
+
 
     }
 
@@ -629,6 +687,7 @@ namespace basal
 
         unsigned tag = ++tagNumber;
         unsigned subIFS = 0;
+
         program << "# If Statement" << endl;
         program << ":IF_" << tag << "_" << ++subIFS << endl;
 
@@ -639,15 +698,8 @@ namespace basal
             if( frenchEnabled ) mess = "Impossible d'utiliser une expression de type '" + basal::getStringFromType( exprType ) + "' en tant que condition" ;
             throwCompileError( mess );
         }
-        string word = lexer::to_upper(current.text);
-        if( word != "ALORS" and word != "THEN" )
-        {
-            string mess = "Keyword 'THEN' expected after condition" ;
-            if( frenchEnabled ) mess = "Mot clef 'ALORS' attendu après condition" ;
-            throwCompileError( mess ); 
-        }
 
-        readToken(); // read THEN
+        readColon();    
         readEndl();
 
         // TODO SCOPE
@@ -656,8 +708,10 @@ namespace basal
         program << "    cmp 0, ax" << endl;
         program << "    jump IF_" << tag << "_" << subIFS << "_END if EQU" << endl; // skip body if false
 
-        word = lexer::to_upper( current.text );
-        while( word != "END" and word != "FIN" and word != "ELSE" and word != "SINON" )
+        createScope();
+
+        string word = lexer::to_upper( current.text );
+        while( word != "END" and word != "FIN" and word != "ELSE" and word != "SINON" and current.type != STOP )
         {
             parseStatement();
             readEndl();
@@ -665,11 +719,13 @@ namespace basal
             word = lexer::to_upper( current.text );
         }
 
+        exitScope();
+
         program << "    jump IF_" << tag << "_END" << endl; // body has been executed
         program << ":IF_" << tag << "_" << subIFS << "_END" << endl;
 
         word = lexer::to_upper( current.text );
-        while( word == "ELSE" or word == "SINON" ) // enter sub if ( ELSE IF )
+        while( ( word == "ELSE" or word == "SINON" ) and current.type != STOP ) // enter sub if ( ELSE IF )
         {
             readToken();
 
@@ -687,14 +743,14 @@ namespace basal
                     throwCompileError( mess );
                 }
                 word = lexer::to_upper(current.text);
-                if( word != "ALORS" and word != "THEN" )
+                if( current.type != COLON )
                 {
-                    string mess = "Keyword 'THEN' expected after condition" ;
-                    if( frenchEnabled ) mess = "Mot clef 'ALORS' attendu après condition" ;
+                    string mess = "Colon character ':' expected after a condition" ;
+                    if( frenchEnabled ) mess = "Charactère ':' attendu après une condition" ;
                     throwCompileError( mess ); 
                 }
 
-                readToken();    // read THEN
+                readToken(); // read ':'
                 readEndl();     // read end of line
 
                 program << "# ELSE IF" << endl;
@@ -702,8 +758,10 @@ namespace basal
                 program << "    cmp 0, ax" << endl;
                 program << "    jump IF_" << tag << "_" << ++subIFS << "_END if EQU" << endl; // skip body if false
 
+                createScope();
+
                 word = lexer::to_upper( current.text );
-                while( word != "END" and word != "FIN" and word != "ELSE" and word != "SINON" )
+                while( word != "END" and word != "FIN" and word != "ELSE" and word != "SINON" and current.type != STOP )
                 {
                     parseStatement();
                     readEndl();
@@ -711,15 +769,20 @@ namespace basal
                     word = lexer::to_upper( current.text );
                 }
 
+                exitScope();
+
                 program << "    jump IF_" << tag << "_END" << endl; // body has been executed
                 program << ":IF_" << tag << "_" << subIFS << "_END" << endl;
             }
-            else if( word == "THEN" or word == "ALORS" )
+            else if( current.type == COLON )
             {
-                readToken(); // read THEN
+                readToken(); // read colon
                 readEndl();
 
                 program << "# ELSE " << endl;
+
+
+                createScope();
 
                 word = lexer::to_upper( current.text );
                 while( word != "END" and word != "FIN" and current.type != STOP  )
@@ -729,6 +792,7 @@ namespace basal
 
                     word = lexer::to_upper( current.text );
                 }
+                exitScope();
                 break; // avoid having else if after an else
             }
             word = lexer::to_upper( current.text );
@@ -744,15 +808,99 @@ namespace basal
 
         readToken(); // read END
 
-        program << "#########" << endl;
         program << ":IF_" << tag << "_END" << endl;
+
 
     }
 
+    // TODO code gen, Scope
     // ForStatement := "FOR" Identifier|VarDeclaration "UNTIL" <var>Expression "DO"
     void Compiler::parseForStatement( void )
     {
+        readToken(); // read FOR keyword
 
+        createScope();
+
+        unsigned tag = ++tagNumber;
+        string word = lexer::to_upper( current.text );
+        string var_loop = "";
+
+        unsigned index_buff = j;
+
+        if( current.type == TYPE )
+        {
+            parseVarDeclaration();
+            var_loop = prev_assigned_var;
+        }
+        else if( current.type == IDENTIFIER and tokens[j+1].type == EQU )
+        {
+            parseAssignement();
+            var_loop = prev_assigned_var;
+        }
+        else if( current.type == IDENTIFIER )
+        {
+            parseFactor();
+            var_loop = prev_used_var;
+        }
+
+        Variable var = currentScope->getVar( var_loop );
+
+        if( var.type != VAR )
+        {
+            j = index_buff;
+            string mess = "The variable for the loop 'for' must be of type 'var'" ;
+            if( frenchEnabled ) mess = "La variable pour la boucle 'pour' doit etre de type 'var'" ;
+            throwCompileError( mess );
+        }
+
+        word = lexer::to_upper( current.text );
+        if( word != "UNTIL" and word != "JUSQUE" )
+        {
+            string mess = "Keyword 'UNTIL' expected" ;
+            if( frenchEnabled ) mess = "Mot clef 'JUSQUE' attendu" ;
+            throwCompileError( mess );
+        }
+        readToken();
+
+        index_buff = j;
+        Type type = parseExpression();
+        if( type == BIN )
+        {
+            j = index_buff;
+            string mess = "The target value in 'for' loop must be of type 'var' not 'bin'" ;
+            if( frenchEnabled ) mess = "La valeur objectif de la boucle 'for' doit etre de type 'var', et non 'bin'" ;
+            throwCompileError( mess );
+        }
+
+
+        if( current.type != COLON )
+        {
+            string mess = "Colon character ':' expected after a condition" ;
+            if( frenchEnabled ) mess = "Charactère ':' attendu après une boucle" ;
+            throwCompileError( mess ); 
+        }
+
+        readToken(); // read ':'
+        readEndl();
+
+        word = lexer::to_upper( current.text );
+        while( word != "END" and word != "FIN" )
+        {
+            parseStatement();
+            readEndl();
+
+            word = lexer::to_upper( current.text );
+        }
+
+        word = lexer::to_upper( current.text );
+        if( word != "END" and word != "FIN" )         
+        {
+            string mess = "Keyword 'END' expected after IF statement" ;
+            if( frenchEnabled ) mess = "Mot clef 'FIN' attendu après bloc SI" ;
+            throwCompileError( mess ); 
+        }
+
+        readToken();
     }
 
     // WhileStatement := "WHILE" <bool>Expression "DO" {Statement} "END"
@@ -766,17 +914,97 @@ namespace basal
     {
         string word = lexer::to_upper( current.text );
         if( current.type == TYPE ) parseVarDeclaration();
+        else if( current.type == KEYWORD )
+        {
+            if( word == "IF" or word == "SI" )      parseIfStatement();
+            if( word == "FOR" or word == "POUR" )   parseForStatement();
+        }
+        else if( current.type == RESERVED_FUNC )
+        {
+            if( word == "DISP" or word == "AFFICHER" ) parseDISP();
+        }
         else if( current.type == IDENTIFIER ) parseAssignement();
         else if( current.type == STOP ) return false;
         else if( current.type == ENDL ) return true;
-        else if( word == "IF" or word == "SI" ) parseIfStatement();
+        else if( current.text == "#" ) return true;
         else
         {
             string mess = "Unrecognized instruction";
             if( frenchEnabled ) mess = "Instruction inconnue";
             throwCompileError( mess );
-        }
+        } 
         return true;
+    }
+
+    // create a new scope, both in assembly and in the compiler
+    void Compiler::createScope( void )
+    {
+        // code gen
+        program << endl;
+        program << "# Entering new scope" << endl;
+        program << "    push fx         # save old scope ref" << endl;
+        program << "    copy sp, fx     # create current scope ref" << endl;
+        program << "# Body of scope" << endl;
+        // compiler side
+        currentScope = new Scope( currentScope );   // create a new scope with current as parent
+        // debuging
+        // cout << "Creating Scope: " << currentScope << ", " << currentScope->parentScope << endl;
+    }
+
+
+    void Compiler::exitScope( void )
+    {
+        if( currentScope->parentScope != nullptr )
+        { 
+            // code gen
+            program << endl;
+            program << "# Exiting scope" << endl;
+            program << "    copy fx, sp     # restore sp to current scope ref" << endl;
+            program << "    pop  fx         # restore previous scope ref" << endl; 
+            // compiler side
+            Scope* s = currentScope;        // buffer
+            currentScope = s->parentScope;  // leave current scope
+            delete s;                       // delete left scope
+        }
+    }
+
+    // display function
+    void Compiler::parseDISP( void )
+    {
+        readToken();
+        if( current.type == QUOTES )
+        {
+            readToken();
+            unsigned s = current.text.length(); 
+            program << endl;
+            program << "# displaying immediate string " << endl;
+            for( unsigned i=0; i<s; i++ )
+            {
+                program << "    disp '" << current.text[i] << "', char" << endl;
+            }
+            readToken();
+            if( current.type != QUOTES )
+            {
+                string mess = "Missing character '\"' in string";
+                if( frenchEnabled ) mess = "Délimitant '\"' manquant à la chaine de charactere";
+                throwCompileError( mess );
+            }
+            readToken();
+
+        }
+        else
+        {
+            Type type = parseExpression();
+            string format = "";
+            if     ( type == BIN ) format = "bin";
+            else if( type == VAR ) format = "int";
+
+            program << endl;
+            program << "# displaying an expression" << endl;
+            program << "    pop  ax" << endl;
+            program << "    disp ax, " << format << endl;
+        }
+
     }
 
 }

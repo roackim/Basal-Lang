@@ -49,7 +49,7 @@ int main( int argc, char *argv[] )
         compiler.compile( file );
     } catch( ... )
     {
-        cout << "-------------" << endl;
+        // exit(-1);
     }
 
     // end chrono
@@ -59,29 +59,27 @@ int main( int argc, char *argv[] )
         cout << "Compiled  in " << elapsed.count() << " ms" << endl;
 
 
-
-
     std::ofstream outfile( out );
     outfile << ":Program" << endl;
-    outfile << compiler.program.str() << std::endl;
-    outfile << "    disp sp, mem" << endl; // debugging
     outfile << "    disp 10, char" << endl;
-    outfile << "    disp (sp), int" << endl;
+    outfile << compiler.program.str() << std::endl;
+
+    outfile << "    disp 10, char" << endl;
     outfile << "    EXIT" << endl;
     outfile.close(); 
 
     // cout << "Program:" << endl << compiler.program.str() << endl;
 
-    // for( uint32_t i=0; i<compiler.tokens.size(); i++)
-    // {
-    //     if( compiler.tokens[i].type == basal::ENDL )
-    //     {
-    //         cout << endl;
-    //     }
-    //         cout << compiler.tokens[i].text << "|";
-    //         cout << basal::getStringFromTokenType( compiler.tokens[i].type ) << ", ";
-    // }
-    // cout << endl;
+    for( uint32_t i=0; i<compiler.tokens.size(); i++)
+    {
+        if( compiler.tokens[i].type == basal::ENDL )
+        {
+            cout << endl;
+        }
+            cout << compiler.tokens[i].text << "|";
+            cout << basal::getStringFromTokenType( compiler.tokens[i].type ) << ", ";
+    }
+    cout << endl;
 
 
     return 0;

@@ -35,15 +35,16 @@ namespace basal   // keep things contained in a namespace.  basm = Basal Assembl
         bool frenchEnabled = false;         // switch error messages to french
     private:
 
-        Scope* p_scope = nullptr;           // current scope
+        Scope* currentScope = nullptr;           // current scope
         unsigned lineNbr = 1;               // one empty line is always artifially added at the begining
-        map<string, uint16_t> variables;    // store addresses of labels
         unsigned stackPointer = 0;
         token current;                      // used as current token
         string fileName;                    // store source file name
 
-
         unsigned tagNumber = 0;             // used to differenciate labels generation
+        uint16_t prev_value = 0;
+        string   prev_assigned_var = "";
+        string   prev_used_var = "";
 
     public:
         // compile to basal assembly
@@ -71,6 +72,9 @@ namespace basal   // keep things contained in a namespace.  basm = Basal Assembl
 
         // curent token must be a ENDL, compileError and return false otherwise
         bool readEndl( void );
+
+        // curent token must be a colon, compileError and return false otherwise
+        bool readColon( void );
 
         // current token must be a comma, compileError and return false otherwise
         bool readComma( void );
@@ -113,6 +117,15 @@ namespace basal   // keep things contained in a namespace.  basm = Basal Assembl
 
         // act as a selector between the various sort of statements
         bool parseStatement( void );
+
+        // create a new scope, both in assembly and in the compiler
+        void createScope( void );
+
+        // quit the current scope, both in assembly and in the compiler 
+        void exitScope( void );
+
+        // display function
+        void parseDISP( void );
 
     };
 }

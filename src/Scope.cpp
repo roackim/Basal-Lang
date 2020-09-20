@@ -1,8 +1,11 @@
 #include "Scope.h"
 #include <iostream>
 
+using std::cout;
+using std::endl;
 
 using namespace basal;
+
 
 void Scope::declareVar( string varName, basal::Type type )
 {
@@ -26,14 +29,26 @@ Variable Scope::getVar( string varName, unsigned depth )
         }
     }
     // has not been found locally, explore deeper scopes recursivelly
-    if( p_parentScope != nullptr ) 
+    if( parentScope != nullptr ) 
     {
-        return p_parentScope->getVar( varName, depth + 1 );
+        return parentScope->getVar( varName, depth + 1 );
+    }
+    else
+    {
+        // no parent scope, return UNDECLARED type var
+        Variable var( "#UNDECLARED", UNDECLARED, 0 );
+        return var;
     }
 
-    // no parent scope, return UNDECLARED type var
-    Variable var( "#UNDECLARED", UNDECLARED, 0 );
-    return var;
+}
 
+void Scope::dispDeclVar( unsigned depth )
+{
+    std::cout << "Scope : " << depth << std::endl;
+    for( unsigned i=0; i<varArray.size(); i++ )
+    {
+        std::cout << i << ": " << varArray[i].name << std::endl;
+    }
+    if( parentScope != nullptr ) parentScope->dispDeclVar( depth + 1 );
 }
 

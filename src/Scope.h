@@ -29,16 +29,18 @@ struct Variable
 class Scope
 {
 public:
-    Scope( Scope* p ): p_parentScope( p ){ };
+    Scope( Scope* p ): parentScope( p ){ };
     bool isDeclared( string varName ); // return true if the var is known in this scope, or any parentScope scope
     void declareVar( string varName, basal::Type type );
     Variable getVar( string varName, unsigned depth = 0 );
+    void dispDeclVar( unsigned depth = 0 );
+
+    Scope* parentScope = nullptr;
 
 private:
     bool isDeclaredLocally( string varName );
     vector<Variable> varArray;
     unsigned varNbr = 0;
-    Scope* p_parentScope = nullptr;
 };
 
 

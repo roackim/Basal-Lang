@@ -36,6 +36,8 @@ string getStringFromTokenType( TokenType type )
             return "COMMA";
         case AMPERSAND:
             return "AMPERSAND";
+        case COLON:
+            return "COLON";
         case LPAREN:
             return "LPAREN";
         case RPAREN:
