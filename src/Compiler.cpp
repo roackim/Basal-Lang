@@ -361,7 +361,6 @@ namespace basal
         if( current.type == RELOP )
         {
             type = BIN;
-            program << "    pop  ax" << endl;
             program << ":CMP_" << tagNumber << endl;
 
             string txt = current.text; // buffer current operator 
@@ -372,6 +371,7 @@ namespace basal
             tagNumber++;
 
             program << "    pop  bx" << endl;
+            program << "    pop  ax" << endl;
             program << "    cmp  ax, bx" << endl;
 
             if( txt == "==" )

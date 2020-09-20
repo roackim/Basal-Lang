@@ -9,7 +9,7 @@ using std::cin ;
 using std::cerr;
 using std::endl;
 
-const bool DISP_TIME   = false;
+const bool DISP_TIME   = true;
 const bool DISP_TOKENS = false;
 
 int main( int argc, char *argv[] )
@@ -64,7 +64,6 @@ int main( int argc, char *argv[] )
     outfile << "    disp 10, char" << endl;
     outfile << compiler.program.str() << std::endl;
 
-    outfile << "    disp 10, char" << endl;
     outfile << "    EXIT" << endl;
     outfile.close(); 
 
