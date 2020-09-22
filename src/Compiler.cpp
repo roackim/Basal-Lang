@@ -672,7 +672,7 @@ namespace basal
 
     }
 
-    // IfStatement := "IF" <bool>Expression "THEN" ENDL {Statement} {"ELSE" "IF" <bool>Expression "THEN" ENDL  {Statement} } ["ELSE" "THEN" ENDL {Statement} ] "END"
+    // IfStatement := "IF" <bool>Expression "THEN" ENDL {Statement} {"ELSE" "IF" <bool>Expression ':' ENDL  {Statement} } ["ELSE" "THEN" ENDL {Statement} ] "END"
     void Compiler::parseIfStatement( void )
     {
         readToken(); // read IF keyword
@@ -806,7 +806,7 @@ namespace basal
     }
 
     // TODO code gen, Scope
-    // ForStatement := "FOR" Identifier|VarDeclaration "UNTIL" <var>Expression "DO"
+    // ForStatement := "FOR" Identifier|VarDeclaration "UNTIL" <var>Expression ':' ENDL {Statement} END
     void Compiler::parseForStatement( void )
     {
         readToken(); // read FOR keyword
@@ -875,14 +875,7 @@ namespace basal
         }
 
 
-        if( current.type != COLON )
-        {
-            string mess = "Colon character ':' expected after a condition" ;
-            if( frenchEnabled ) mess = "Charactère ':' attendu après une boucle" ;
-            throwCompileError( mess ); 
-        }
-
-        readToken(); // read ':'
+        readColon();
         readEndl();
 
         program << "    pop  bx     # target value in for loop" << endl;
@@ -947,9 +940,65 @@ namespace basal
         readToken();
     }
 
-    // WhileStatement := "WHILE" <bool>Expression "DO" {Statement} "END"
+    // WhileStatement := "WHILE" <bool>Expression ':' ENDL {Statement} "END"
     void Compiler::parseWhileStatement( void )
     {
+        readToken(); // read 'While'
+
+        unsigned tag = ++tagNumber;
+
+        program << endl;
+        program << "# While loop " << endl;
+        program << ":WHILE_" << tag << "_LOOP" << endl << endl;
+
+        program << "# While condition" << endl;
+    
+        createScope();
+
+        unsigned oj = j; // buffer current token index
+        Type type = parseExpression(); // target value is push on the stack
+        if( type != BIN )
+        {
+            j = oj;
+            string mess = "The condition inside 'while' loop must be of type 'bin'" ;
+            if( frenchEnabled ) mess = "La condition de la boucle 'tantque' doit être de type 'bin'" ;
+            throwCompileError( mess );
+        }
+
+        program << "    pop  ax     # while comparison" << endl;
+        program << "    cmp   0, ax" << endl;
+        program << "    jump WHILE_" << tag << "_END if EQU" << endl << endl;
+
+        program << "# While body" << endl;
+
+        readColon();    // read ':'
+        readEndl();     // read end of line
+
+        
+        string word = lexer::to_upper( current.text );
+        while( word != "END" and word != "FIN" )
+        {
+            parseStatement();
+            readEndl();
+
+            word = lexer::to_upper( current.text );
+        }
+
+        exitScope();
+
+        program << "    jump WHILE_" << tag << "_LOOP" << endl;
+        program << ":WHILE_" << tag << "_END" << endl;
+
+        word = lexer::to_upper( current.text );
+        if( word != "END" and word != "FIN" )         
+        {
+            string mess = "Keyword 'END' expected after IF statement" ;
+            if( frenchEnabled ) mess = "Mot clef 'FIN' attendu après bloc SI" ;
+            throwCompileError( mess ); 
+        }
+
+        readToken();
+        
 
     }
 
@@ -960,8 +1009,15 @@ namespace basal
         if( current.type == TYPE ) parseVarDeclaration();
         else if( current.type == KEYWORD )
         {
-            if( word == "IF" or word == "SI" )      parseIfStatement();
-            if( word == "FOR" or word == "POUR" )   parseForStatement();
+            if( word == "IF" or word == "SI" ) parseIfStatement();
+            else if( word == "FOR" or word == "POUR" ) parseForStatement();
+            else if( word == "WHILE" or word == "TANTQUE" ) parseWhileStatement();
+            else
+            {
+                string mess = "Unrecognized instruction";
+                if( frenchEnabled ) mess = "Instruction inconnue";
+                throwCompileError( mess );
+            } 
         }
         else if( current.type == RESERVED_FUNC )
         {
