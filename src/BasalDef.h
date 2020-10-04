@@ -21,6 +21,7 @@ namespace basal
         QUOTES,
         COMMA,
         AMPERSAND,
+        DOT,
         COLON,
         LPAREN,
         RPAREN,
@@ -29,9 +30,10 @@ namespace basal
         LBRACES,
         RBRACES,
         DECIMAL_VALUE,      //  |
-        HEXA_VALUE,         //   > values
+        FLOAT_VALUE,        //  |
+        HEXA_VALUE,         //  |> values
         BINARY_VALUE,       //  |
-        RESERVED_VALUE,
+        RESERVED_VALUE,     //  |
         TYPE,
         STRING,
         SPACES,
@@ -42,8 +44,9 @@ namespace basal
     };
     enum Type   // basal types // TODO add more types ?
     {
-        VAR,
+        INT,
         BIN,
+        FLOAT,
         UNDECLARED,
         TYPE_ERROR
     };
@@ -54,8 +57,6 @@ namespace basal
     // return the corresponding basal Type
     Type getTypeFromString( string s );
 
-    // return the corresponding string from basal Type
-    string getStringFromType( basal::Type type );
 }
 
 namespace lexer

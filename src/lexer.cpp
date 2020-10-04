@@ -82,7 +82,8 @@ namespace lexer
     bool matchTYPE( string op )
     {
         op = to_upper( op );
-        return( op=="VAR" or op=="BIN");
+        return( op=="INT" or op=="INTEGER" or op=="ENT" or op=="ENTIER" or op=="BIN" or op=="BINARY" or op=="BINAIRE"
+                or op=="DEC" or op=="DECIMAL");
     }
 
     // return true if the string is a basal reserved function
@@ -132,6 +133,22 @@ namespace lexer
             if( not isNumber( s[i] )) return false; // must have atleast one number
         }
         return true;
+    }
+
+    bool matchFloatValue( const string& s )
+    {
+        unsigned off = 0; // offset to start the loop approprietly ( skip special char at begining ex : -123 )
+        bool point = false;
+
+        if( s[0]  == '-' ) off = 1;
+        if( not (s.length() > off )) return false; // must have atleast one number
+        for( unsigned i=off; i < s.length(); i++ )
+        {
+            if( not point and s[i] == '.' )
+                point = true ;
+            else if( not isNumber( s[i] )) return false; // must have atleast one number
+        }
+        return true and point;
     }
 
     bool matchHexaValue( const string& s )
@@ -248,7 +265,7 @@ namespace lexer
             }
             else if( quotes == true and c != '\\' )
             {
-                word += line[i];
+                word += c;
                 esc = false;
                 continue;
             }
@@ -265,7 +282,29 @@ namespace lexer
                 esc = false;
                 continue;
             }
-            else if( c==',' or c=='&' or c=='(' or c==')' or c=='[' or c==']' or c=='{' or c=='}' or c=='.' or c==';' or c==':')
+            else if( c=='.' )
+            {
+                if( matchDecimalValue( word ))
+                {
+                    word += c;
+                    esc = false;
+                    continue;
+                }
+                else
+                {
+                    if( quotes ) word += line[i];
+                    else
+                    {
+                        endWord( words, word );
+                        word += line[i];
+                        endWord( words, word );
+                    }
+                    esc = false;
+                    continue;
+                }
+                    
+            }
+            else if( c==',' or c=='&' or c=='(' or c==')' or c=='[' or c==']' or c=='{' or c=='}' or c==';' or c==':')
             {
                 if( quotes ) word += line[i];
                 else
@@ -349,6 +388,7 @@ namespace lexer
         else if( txt == "{" ) type = LBRACES;
         else if( txt == "}" ) type = RBRACES;
         else if( txt == "=" ) type = EQU;
+        else if( txt == "." ) type = DOT;
         else if( matchRELOP( txt ))             type = RELOP;           // try to match relationnal operators
         else if( matchADDOP( txt ))             type = ADDOP;           // try to match additive operators
         else if( matchMULOP( txt ))             type = MULOP;           // try to match additive operators
@@ -357,6 +397,7 @@ namespace lexer
         else if( matchRESERVED_VALUE( txt ))    type = RESERVED_VALUE;  // try to match reserved functions
         else if( matchTYPE( txt ))              type = TYPE;            // try to match basal type declaration
         else if( matchKEYWORD( txt ))           type = KEYWORD;         // try to match basal keywords
+        else if( matchFloatValue( txt ))        type = FLOAT_VALUE;     // try to match float values
         else if( matchDecimalValue( txt ))      type = DECIMAL_VALUE;   // try to match decimal values
         else if( matchHexaValue( txt ))         type = HEXA_VALUE;      // try to match hexa values
         else if( matchBinValue( txt ))          type = BINARY_VALUE;    // try to match binary values

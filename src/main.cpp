@@ -50,7 +50,7 @@ int main( int argc, char *argv[] )
         compiler.compile( file );
     } catch( ... )
     {
-        // exit(-1);
+        exit(-1);
     }
 
     // end chrono

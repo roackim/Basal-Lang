@@ -36,6 +36,8 @@ string getStringFromTokenType( TokenType type )
             return "COMMA";
         case AMPERSAND:
             return "AMPERSAND";
+        case DOT:
+            return "DOT";
         case COLON:
             return "COLON";
         case LPAREN:
@@ -52,6 +54,8 @@ string getStringFromTokenType( TokenType type )
             return "RBRACES";
         case DECIMAL_VALUE:
             return "DEC_VAL";
+        case FLOAT_VALUE:
+            return "FLOAT_VAL";
         case HEXA_VALUE:
             return "HEX_VAL";
         case BINARY_VALUE:
@@ -82,31 +86,14 @@ string getStringFromTokenType( TokenType type )
 
 
     // return the corresponding basal Type
-    Type getTypeFromString( string s )
+    Type getTypeFromString( string op )
     {
-        s = lexer::to_upper( s );
-        if     ( s == "VAR" ) return VAR;
-        else if( s == "BIN" ) return BIN;
+        op = lexer::to_upper( op );
+        if     ( op=="INT" or op=="INTEGER" or op=="ENT" or op=="ENTIER" ) return INT;
+        else if( op=="BIN" or op=="BINARY" or op=="BINAIRE" ) return BIN;
+        else if( op=="DEC" or op == "DECIMAL" ) return FLOAT;
         return TYPE_ERROR ;
     } 
-
-    // return the corresponding string from basal Type
-    string getStringFromType( basal::Type type )
-    {
-        switch( type )
-        {
-            case VAR:
-                return "var";
-            case BIN:
-                return "bin";
-            case UNDECLARED:
-                return "undeclared";
-            case TYPE_ERROR:
-                return "TYPE_ERROR";
-            default:
-                return "undefined";
-        }
-    }
 
 }
 

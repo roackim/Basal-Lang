@@ -18,7 +18,12 @@ using std::endl;
 using lexer::token;
 using std::stringstream;
 
-
+// forward declaration
+namespace half_float
+{
+    class half;
+}
+using half_float::half;
         
 namespace basal   // keep things contained in a namespace.  basm = Basal Assembly
 {
@@ -58,7 +63,7 @@ namespace basal   // keep things contained in a namespace.  basm = Basal Assembl
         // example : source file not found for example
         void throwSimpleError( string error_message );
 
-        // Call throwCompileError if incompatible types 
+        // Call throwCompileError if incompatible types, returns TYPE result
         void checkOperandTypes( string OP, Type type1, Type type2 );
 
         // Call throwCompileError if incompatible type
@@ -81,6 +86,9 @@ namespace basal   // keep things contained in a namespace.  basm = Basal Assembl
 
         // parse decimals, binary and hexadecimal values
         uint16_t parseValue( void ); 
+
+        // parse Float Values
+        half parseFloatValue( void );
 
         // get one token from a string already split 
         void tokenizeOneLine( const string& line );
@@ -129,6 +137,9 @@ namespace basal   // keep things contained in a namespace.  basm = Basal Assembl
 
         // display function
         void parseDISP( void );
+
+        // return the corresponding string from basal Type
+        string getStringFromType( basal::Type type );
 
     };
 }

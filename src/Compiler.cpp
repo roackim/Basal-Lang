@@ -2,10 +2,20 @@
 #include <fstream>
 #include <cmath>
 #include <vector>
+
 #include "Compiler.h"
 #include "lexer.h"
 
+// save diagnostic state
+#pragma GCC diagnostic push 
+
+#include "half.hpp"
+
+// turn the warnings back on
+#pragma GCC diagnostic pop
  
+using namespace half_float;
+
 namespace basal
 {
     // default constructor of the compiler object
@@ -119,13 +129,13 @@ namespace basal
         string op = lexer::to_upper( OP );
         // Error message
         string message = "The operator '" + OP + "' is not compatible with operands types '" 
-            + basal::getStringFromType( type1 ) + "' and '" + basal::getStringFromType( type2 ) + "'";
+            + getStringFromType( type1 ) + "' and '" + getStringFromType( type2 ) + "'";
         if( frenchEnabled ) message = "L'opérateur '" + OP + "' est imcompatible avec les opérandes de types '" 
-            + basal::getStringFromType( type1 ) + "' et '" + basal::getStringFromType( type2 ) + "'";
+            + getStringFromType( type1 ) + "' et '" + getStringFromType( type2 ) + "'";
 
         if( op=="-" or op=="*" or op=="/" or op=="^" or op=="%" ) // var operands expected
         {
-            if( type1 != VAR or type2 != VAR )
+            if( type1 != INT or type2 != INT )
                 throwCompileError( message );
         }
         else if( op=="OR" or op=="OU" or op=="AND" or op=="ET" or op=="." ) // bin operands expected
@@ -148,9 +158,9 @@ namespace basal
         string op = lexer::to_upper( OP );
         // Error message
         string message = "The operator '" + OP + "' is not compatible with operand type '" 
-            + basal::getStringFromType( type1 ) + "'";
+            + getStringFromType( type1 ) + "'";
         if( frenchEnabled ) message = "L'opérateur '" + OP + "' est imcompatible avec l'opérande de type '" 
-            + basal::getStringFromType( type1 ) + "'";
+            + getStringFromType( type1 ) + "'";
 
         if( op=="NOT" or op=="NON" or op=="!" )
         {
@@ -164,7 +174,7 @@ namespace basal
     {
         tagNumber++;
         op = lexer::to_upper( op );
-        if     ( op=="+" and type1 == VAR and type2 == VAR ) return "add ";
+        if     ( op=="+" and type1 == INT and type2 == INT ) return "add ";
         else if( op=="-" ) return "sub "; 
         else if( op=="*" ) return "mul ";
         else if( op=="/" ) return "div ";
@@ -309,6 +319,24 @@ namespace basal
         throwCompileError( "Expected a value" );
         return 0;
     }
+
+    // parse Float Values
+    half Compiler::parseFloatValue( void )
+    {
+        string value = current.text;
+        float i = atof( value.c_str() );
+        cout << i << endl;
+        if( i > 65500 or i < -65500 )
+        {
+            throwCompileError( "Value '" + current.text + "' is too big to be encoded.\n\trange: [0, 65535] or [-32768, 32767]" );
+        }
+        readToken();
+
+        half h( i );
+        return h;
+    }
+
+
 
     // tokenize a split line  ( called after lexer::splitLine )
     void Compiler::tokenizeOneLine( const string& line )  
@@ -472,9 +500,20 @@ namespace basal
         {
             uint16_t value = parseValue();
             program << "    push " << value << endl;
-            return VAR;
+            return INT;
 
         } 
+        else if( current.type == FLOAT_VALUE )
+        {
+            half h = parseFloatValue();
+            uint16_t* p;
+            p = (uint16_t*) &h;
+
+            cout << "Parsed: " << h << endl;
+            program << "    push " << *p << "   # push float " << h << endl;
+            cout << "Encoded: " << *p << endl;
+            return FLOAT; 
+        }
         else if( current.type == RESERVED_VALUE )
         {
             string s = lexer::to_upper( current.text );
@@ -639,7 +678,7 @@ namespace basal
 
         uint16_t rvalue = prev_value;
         
-        if( var.type == BIN and exprType == VAR )
+        if( var.type == BIN and exprType == INT )
         {
             tagNumber++;
             if( rvalue == 0 ) 
@@ -686,8 +725,8 @@ namespace basal
         Type exprType = parseExpression();
         if( exprType != BIN )
         {
-            string mess = "Cannot use an expression of type '" + basal::getStringFromType( exprType ) + "' as a condition" ;
-            if( frenchEnabled ) mess = "Impossible d'utiliser une expression de type '" + basal::getStringFromType( exprType ) + "' en tant que condition" ;
+            string mess = "Cannot use an expression of type '" + getStringFromType( exprType ) + "' as a condition" ;
+            if( frenchEnabled ) mess = "Impossible d'utiliser une expression de type '" + getStringFromType( exprType ) + "' en tant que condition" ;
             throwCompileError( mess );
         }
 
@@ -730,8 +769,8 @@ namespace basal
                 Type SubIfExprType = parseExpression();
                 if( SubIfExprType != BIN )
                 {
-                    string mess = "Cannot use an expression of type '" + basal::getStringFromType( exprType ) + "' as a condition" ;
-                    if( frenchEnabled ) mess = "Impossible d'utiliser une expression de type '" + basal::getStringFromType( exprType ) + "' en tant que condition" ;
+                    string mess = "Cannot use an expression of type '" + getStringFromType( exprType ) + "' as a condition" ;
+                    if( frenchEnabled ) mess = "Impossible d'utiliser une expression de type '" + getStringFromType( exprType ) + "' en tant que condition" ;
                     throwCompileError( mess );
                 }
                 word = lexer::to_upper(current.text);
@@ -841,7 +880,7 @@ namespace basal
 
         Variable var = currentScope->getVar( var_loop );
 
-        if( var.type != VAR )
+        if( var.type != INT )
         {
             j = index_buff;
             string mess = "The variable for the loop 'for' must be of type 'var'" ;
@@ -880,8 +919,6 @@ namespace basal
 
         program << "    pop  bx     # target value in for loop" << endl;
 
-        if( decl_def ) createScope();
-
         var = currentScope->getVar( var_loop );
 
         // code gen 
@@ -897,6 +934,8 @@ namespace basal
         program << "# for body" << endl;
         program << ":FOR_" << tag << "_BODY" << endl; 
 
+        createScope();
+
         word = lexer::to_upper( current.text );
         while( word != "END" and word != "FIN" )
         {
@@ -906,12 +945,12 @@ namespace basal
             word = lexer::to_upper( current.text );
         }
 
+        exitScope();
+
         accessVar( var );
 
         program << "    pop  bx" << endl;
         program << "    add  bx, (ax)" << endl; 
-
-        if( decl_def ) exitScope();
 
         program << endl;
         program << "    jump FOR_" << tag << "_LOOP" << endl;
@@ -1145,7 +1184,7 @@ namespace basal
             Type type = parseExpression();
             string format = "";
             if     ( type == BIN ) format = "bin";
-            else if( type == VAR ) format = "int";
+            else if( type == INT ) format = "int";
 
             program << endl;
             program << "# displaying an expression" << endl;
@@ -1153,6 +1192,30 @@ namespace basal
             program << "    disp ax, " << format << endl;
         }
 
+    }
+
+
+    // return the corresponding string from basal Type
+    string Compiler::getStringFromType( basal::Type type )
+    {
+        switch( type )
+        {
+            case INT:
+                if( frenchEnabled ) return "entier";
+                else                return "integer";
+            case BIN:
+                if( frenchEnabled ) return "binaire";
+                else                return "binary";
+            case FLOAT:
+                return "decimal";
+
+            case UNDECLARED:
+                return "undeclared";
+            case TYPE_ERROR:
+                return "TYPE_ERROR";
+            default:
+                return "undefined";
+        }
     }
 
 }

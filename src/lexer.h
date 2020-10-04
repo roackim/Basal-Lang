@@ -50,6 +50,7 @@ namespace lexer
     bool isHexa( const char& c );
     // return true if the string correctly match, false ohterwise, allow for cascade matching
     bool matchDecimalValue( const string& s );
+    bool matchFloatValue( const string& s );
     bool matchHexaValue( const string& s );
     bool matchBinValue( const string& s );
     bool matchCharValue( const string& s );
