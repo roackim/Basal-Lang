@@ -46,7 +46,7 @@ namespace lexer
     bool matchMULOP( string op )
     {
         string up = to_upper( op );
-        return( op=="*" or op=="/" or op=="^" or op=="%" or op=="." or up=="AND" or up=="ET");
+        return( op=="*" or op=="/" or op=="%" or op=="." or up=="AND" or up=="ET");
         
     }
 
@@ -148,6 +148,7 @@ namespace lexer
                 point = true ;
             else if( not isNumber( s[i] )) return false; // must have atleast one number
         }
+        if( s[s.length() - 1] == '.' ) return false; // force digits after point
         return true and point;
     }
 
@@ -376,8 +377,10 @@ namespace lexer
         static bool quotes = false;
         using namespace basal;
         TokenType type = UNKNOWN;
-        if     ( txt == "," ) type = COMMA;
-        else if( txt == "\""){ type = QUOTES; quotes = not quotes; }
+
+        if( txt == "\""){ type = QUOTES; quotes = not quotes; }
+        else if( quotes )     type = STRING;
+        else if( txt == "," ) type = COMMA;
         else if( txt == ";" or txt == "#" ) type = ENDL;
         else if( txt == "&" ) type = AMPERSAND;
         else if( txt == ":" ) type = COLON;
@@ -388,6 +391,7 @@ namespace lexer
         else if( txt == "{" ) type = LBRACES;
         else if( txt == "}" ) type = RBRACES;
         else if( txt == "=" ) type = EQU;
+        else if( txt == "^" ) type = EXPOP;
         else if( matchRELOP( txt ))             type = RELOP;           // try to match relationnal operators
         else if( matchADDOP( txt ))             type = ADDOP;           // try to match additive operators
         else if( matchMULOP( txt ))             type = MULOP;           // try to match additive operators
@@ -400,8 +404,8 @@ namespace lexer
         else if( matchDecimalValue( txt ))      type = DECIMAL_VALUE;   // try to match decimal values
         else if( matchHexaValue( txt ))         type = HEXA_VALUE;      // try to match hexa values
         else if( matchBinValue( txt ))          type = BINARY_VALUE;    // try to match binary values
+
         else if( matchIdentifier( txt))         type = IDENTIFIER;      // try to match label call ex: jump Hello_World_Proc
-        else if( quotes )                       type = STRING;
         else if( isSpace( txt[0] ))             type = SPACES;
 
         token ret( txt, type );

@@ -15,6 +15,7 @@ namespace basal
         ADDOP,              // additive operator
         MULOP,              // multiplicative operator 
         RELOP,              // relationnal operator
+        EXPOP,              // exponent operator
         NOT,
         KEYWORD,            // keyword
         RESERVED_FUNC,           // reserved functions

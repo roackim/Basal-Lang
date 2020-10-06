@@ -123,7 +123,6 @@ namespace basal
     }
 
 
-    // TODO proper return type for every operator and operands
     // Call throwCompileError if incompatible types 
     Type Compiler::checkOperandTypes( string OP, Type type1, Type type2 )
     {
@@ -134,6 +133,16 @@ namespace basal
         if( frenchEnabled ) message = "L'opérateur '" + OP + "' est imcompatible avec les opérandes de types '" 
             + getStringFromType( type1 ) + "' et '" + getStringFromType( type2 ) + "'";
 
+        if(( type1 == FLOAT and type2 == INT ) or ( type1 == INT and type2 == FLOAT ) or ( type1 == FLOAT and type2 == FLOAT ))
+        {
+            if( op=="+" or op=="-" or op=="*" or op=="/" )
+                return FLOAT;
+        }
+        if( type1 == FLOAT and type2 == INT )
+        {
+            if( op == "^" )
+                return FLOAT;
+        }
         if( op=="-" or op=="*" or op=="/" or op=="^" or op=="%" ) // var operands expected
         {
             if( type1 != INT or type2 != INT )
@@ -148,12 +157,26 @@ namespace basal
         }
         else if( op=="+" or op=="=")
         {
-            if( type1 != type2 )
+            if( type1 == FLOAT and type2 == INT )
+            {
+                return FLOAT;
+            }
+            else if( type1 != type2 )
             {
                 throwCompileError( message );
             }
             return type1;
         }
+        else if( lexer::matchRELOP( op ) )
+        {
+            if( type1 != type2 )
+            {
+                throwCompileError( message );
+            }
+            return BIN;
+        }
+        else
+            throwCompileError( message );
         return UNDECLARED;
     }
 
@@ -179,33 +202,69 @@ namespace basal
     {
         tagNumber++;
         op = lexer::to_upper( op );
-        if     ( op=="+" and type1 == INT and type2 == INT ) return "add ";
-        else if( op=="-" ) return "sub "; 
-        else if( op=="*" ) return "mul ";
-        else if( op=="/" ) return "div ";
-        else if( op=="%" ) return "mod ";
-        else if( op=="AND" or op=="ET" or op=="." ) return "and ";
-        else if( op=="OR"  or op=="OU" or op=="+" ) return "or  ";
-        else if( op=="^" )
-        {
-            stringstream s;
-            s << ":POW_" << tagNumber << endl;
-            s << "    copy bx, cx"  << endl;
-            s << "    copy ax, bx"  << endl;
-            s << "    copy  1, ax"  << endl;
-            s << ":POW_LOOP_" << tagNumber << endl;
-            s << "    cmp  0, cx"   << endl;
-            s << "    jump POW_END_" << tagNumber << " if EQU" << endl;
-            s << "    mul  bx, ax"  << endl;
-            s << "    sub  1, cx"   << endl;
-            s << "    jump POW_LOOP_" << tagNumber << endl;
-            s << ":POW_END_" << tagNumber << endl;
-            return s.str();
 
+        stringstream s;
+
+        if( type1 == BIN and type2 == BIN )
+        {
+            if( op=="AND" or op=="ET" or op=="." ) s << "    and bx, ax";
+            if( op=="OR"  or op=="OU" or op=="+" ) s << "    or  bx, ax";
+        }
+        else if( type1 == INT  and type2 == INT )
+        {
+            if     ( op=="+" ) s << "    add bx, ax" << endl; 
+            else if( op=="-" ) s << "    sub bx, ax" << endl; 
+            else if( op=="*" ) s << "    mul bx, ax" << endl;
+            else if( op=="/" ) s << "    div bx, ax" << endl;
+            else if( op=="%" ) s << "    mod bx, ax" << endl;
+            else if( op=="^" )
+            {
+                s << ":POW_" << tagNumber << endl;
+                s << "    copy bx, cx"  << endl;
+                s << "    copy ax, bx"  << endl;
+                s << "    copy  1, ax"  << endl;
+                s << ":POW_LOOP_" << tagNumber << endl;
+                s << "    cmp  0, cx"    << endl;
+                s << "    jump POW_END_" << tagNumber << " if EQU" << endl;
+                s << "    mul  bx, ax"   << endl;
+                s << "    sub  1, cx"    << endl;
+                s << "    jump POW_LOOP_" << tagNumber << endl;
+                s << ":POW_END_" << tagNumber << endl;
+            }
+        }
+        else if( type1 == FLOAT )
+        {
+            if( type2 == INT and op!="^" ) // case '^' type2 needs to be int
+                s << "    itof bx" << endl;
+            if( type2 == FLOAT or type2 == INT )
+            {
+                if     ( op=="+" ) s << "    fadd bx, ax" << endl; 
+                else if( op=="-" ) s << "    fsub bx, ax" << endl; 
+                else if( op=="*" ) s << "    fmul bx, ax" << endl;
+                else if( op=="/" ) s << "    fdiv bx, ax" << endl;
+                else if( op=="^" and type2==INT )
+                {
+                    s << ":POW_" << tagNumber << endl;
+                    s << "    copy bx, cx"  << endl;
+                    s << "    copy ax, bx"  << endl;
+                    s << "    copy  1, ax"  << endl;
+                    s << "    itof ax"      << endl;
+                    s << ":POW_LOOP_" << tagNumber << endl;
+                    s << "    cmp  0, cx"    << endl;
+                    s << "    jump POW_END_" << tagNumber << " if EQU" << endl;
+                    s << "    fmul  bx, ax"  << endl;
+                    s << "    sub  1, cx"    << endl;
+                    s << "    jump POW_LOOP_" << tagNumber << endl;
+                    s << ":POW_END_" << tagNumber << endl;
+
+                }
+            }
         }
         else
-            throwSimpleError("Should not happen: error in getInstrFromADDorMUL(), token: " + op);
-        return "";
+            throwCompileError("Error in: getInstr");
+
+        // returns the instructions needed
+        return s.str();
     }
 
     // increment j and reassign token t
@@ -328,6 +387,13 @@ namespace basal
     // parse Float Values
     half Compiler::parseFloatValue( void )
     {
+        int sign = 1;
+        if( current.text == "-" )
+        {
+            sign = -1;
+            readToken();
+        }
+
         string value = current.text;
         float i = atof( value.c_str() );
         cout << i << endl;
@@ -337,10 +403,9 @@ namespace basal
         }
         readToken();
 
-        half h( i );
+        half h( i*sign );
         return h;
     }
-
 
 
     // tokenize a split line  ( called after lexer::splitLine )
@@ -389,46 +454,51 @@ namespace basal
     // Expression := SimpleExpression [ RelationalOperator SimpleExpression ]
     Type Compiler::parseExpression( void )
     {
-        Type type = parseSimpleExpression();
+        Type type1 = parseSimpleExpression();
 
         if( current.type == RELOP )
         {
-            type = BIN;
             program << ":CMP_" << tagNumber << endl;
 
-            string txt = current.text; // buffer current operator 
+            string op = current.text; // buffer current operator 
  
             readToken(); // read relationnal operator
-            parseSimpleExpression();
+            Type type2 = parseSimpleExpression();
 
             tagNumber++;
+            
+            checkOperandTypes( op, type1, type2 );
+
 
             program << "    pop  bx" << endl;
             program << "    pop  ax" << endl;
-            program << "    cmp  ax, bx" << endl;
+            if( type1 == FLOAT and type2 == FLOAT )
+                program << "    fcmp ax, bx" << endl;
+            else
+                program << "    cmp  ax, bx" << endl;
 
-            if( txt == "==" )
+            if( op == "==" )
             {
                 program << "    jump CMP_TRUE_" << tagNumber << " if EQU" << endl;
             }
-            else if( txt == "!=" )
+            else if( op == "!=" )
             {
                 program << "    jump CMP_TRUE_" << tagNumber << " ifnot EQU" << endl;
             }
-            else if( txt == ">" )
+            else if( op == ">" )
             {
                 program << "    jump CMP_TRUE_" << tagNumber << " if NEG" << endl;
             } 
-            else if( txt == "<" )
+            else if( op == "<" )
             {
                 program << "    jump CMP_TRUE_" << tagNumber << " if POS" << endl;
             }
-            else if( txt == "<=" )
+            else if( op == "<=" )
             {
                 program << "    jump CMP_TRUE_" << tagNumber << " if EQU" << endl;
                 program << "    jump CMP_TRUE_" << tagNumber << " if POS" << endl;
             }
-            else if( txt == ">=" )
+            else if( op == ">=" )
             {
                 program << "    jump CMP_TRUE_" << tagNumber << " if EQU" << endl;
                 program << "    jump CMP_TRUE_" << tagNumber << " if NEG" << endl;
@@ -439,9 +509,11 @@ namespace basal
             program << ":CMP_TRUE_" << tagNumber << endl;
             program << "    push 1" << endl;
             program << ":CMP_END_" << tagNumber << endl;
+
+            type1 = BIN;
         }
     
-        return type;
+        return type1;
     }
 
     // SimpleExpression := Term { additiveOperator Term }
@@ -459,7 +531,7 @@ namespace basal
             string instr = getInstrFromADDorMUL( op, type1, type2 );
             program << "    pop  bx" << endl;   // right operand
             program << "    pop  ax" << endl; 
-            program << "    " << instr << " bx, ax" << endl;
+            program << instr ; 
             program << "    push ax" << endl;
 
             type1 = checkOperandTypes( op, type1, type2 ); // doesn't account for relationnal operators
@@ -483,10 +555,7 @@ namespace basal
             string instr = getInstrFromADDorMUL( op, type1, type2 );
             program << "    pop  bx" << endl;   // right operand
             program << "    pop  ax" << endl;   // left operand
-            if( op=="^" )
-                program << instr << endl;
-            else
-                program << "    " << instr << " bx, ax" << endl;
+            program << instr;
             program << "    push ax" << endl;
             
             type1 = checkOperandTypes( op, type1, type2 ); // doesn't account for relationnal operators
@@ -496,28 +565,28 @@ namespace basal
         return type1;
     }
 
-    // Factor := number | identifier | "(" Expression ")"
+    // Factor := number | identifier | "(" Expression ")" | Factor '^' Factor
     Type Compiler::parseFactor( void )
     {
 
-        if( current.type == DECIMAL_VALUE or current.type == HEXA_VALUE or current.type == BINARY_VALUE or current.text == "-")
-        {
-            uint16_t value = parseValue();
-            program << "    push " << value << endl;
-            return INT;
+        Type type1 = UNDECLARED;
 
-        } 
-        else if( current.type == FLOAT_VALUE )
+        if( current.type == FLOAT_VALUE or ( current.text == "-" and tokens[j+1].type == FLOAT_VALUE))
         {
             half h = parseFloatValue();
             uint16_t* p;
             p = (uint16_t*) &h;
 
-            cout << "Parsed: " << h << endl;
             program << "    push " << *p << "              # push float " << h << endl;
-            cout << "Encoded: " << *p << endl;
-            return FLOAT; 
+            type1 = FLOAT; 
         }
+        else if( current.type == DECIMAL_VALUE or current.type == HEXA_VALUE or current.type == BINARY_VALUE or current.text == "-")
+        {
+            uint16_t value = parseValue();
+            program << "    push " << value << endl;
+            type1 = INT;
+
+        } 
         else if( current.type == RESERVED_VALUE )
         {
             string s = lexer::to_upper( current.text );
@@ -527,22 +596,20 @@ namespace basal
                 program << "    push 0" << endl;
 
             readToken();
-            return BIN;
+            type1 = BIN;
         }
         else if( current.type == NOT )
         {
             string op = current.text;
             readToken(); // read 'not' operator
 
-            Type type = parseFactor();
+            type1 = parseFactor();
             
             program << "    pop  ax" << endl;
             program << "    add  1, ax" << endl;
             program << "    mod  2, ax" << endl;
             program << "    push ax" << endl;
-            checkOperandTypes( op, type );
-
-            return type;
+            checkOperandTypes( op, type1 );
 
         }
         else if( current.type == IDENTIFIER ) // not a declaration, identifier is used as a variable
@@ -575,13 +642,13 @@ namespace basal
             program << "# end of using var: " << var.name << endl;
 
             readToken();
-            return var.type;
+            type1 = var.type;
 
         }
         else if( current.type == LPAREN )
         {
             readToken(); // read left parent
-            Type type = parseExpression();
+            type1 = parseExpression();
             if( current.type == RPAREN ) readToken();
             else  // Error
             {
@@ -589,7 +656,6 @@ namespace basal
                 if( frenchEnabled ) message = "Parenthèse fermante manquante";
                 throwCompileError( message );
             }
-            return type;
         }
         else    // throw error
         {
@@ -597,7 +663,23 @@ namespace basal
             if( frenchEnabled ) message = "Symbole innatendu '" + current.text + "'" ;
             throwCompileError( message );
         }
-        return UNDECLARED;
+        while( current.type == EXPOP )
+        {
+            string op = lexer::to_upper( current.text );
+            readToken(); // read op
+            
+            Type type2 = parseFactor(); // right operand
+
+            string instr = getInstrFromADDorMUL( op, type1, type2 );
+            program << "    pop  bx" << endl;   // right operand
+            program << "    pop  ax" << endl;   // left operand
+            program << instr;                   // result stored in ax
+            program << "    push ax" << endl;
+            
+            type1 = checkOperandTypes( op, type1, type2 ); // doesn't account for relationnal operators
+        }
+
+        return type1;
     }
 
     // VarDeclaration := type identifier [ "=" Expression ]
@@ -709,6 +791,8 @@ namespace basal
         program << endl;
         accessVar( var );
         program << "    pop  bx" << endl;
+        if( var.type == FLOAT and exprType == INT )
+            program << "    itof bx" << endl;
         program << "    copy bx, (ax)" << endl;
         program << "# end of assignement to var: " << var.name << endl;
 
@@ -736,8 +820,6 @@ namespace basal
 
         readColon();    
         readEndl();
-
-        // TODO SCOPE
 
         program << "    pop ax" << endl;
         program << "    cmp 0, ax" << endl;
@@ -848,7 +930,6 @@ namespace basal
 
     }
 
-    // TODO code gen, Scope
     // ForStatement := "FOR" Identifier|VarDeclaration "UNTIL" <var>Expression ':' ENDL {Statement} END
     void Compiler::parseForStatement( void )
     {
