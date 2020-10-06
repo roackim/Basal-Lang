@@ -64,7 +64,7 @@ namespace basal   // keep things contained in a namespace.  basm = Basal Assembl
         void throwSimpleError( string error_message );
 
         // Call throwCompileError if incompatible types, returns TYPE result
-        void checkOperandTypes( string OP, Type type1, Type type2 );
+        Type checkOperandTypes( string OP, Type type1, Type type2 );
 
         // Call throwCompileError if incompatible type
         void checkOperandTypes( string OP, Type type1 );

@@ -123,8 +123,9 @@ namespace basal
     }
 
 
+    // TODO proper return type for every operator and operands
     // Call throwCompileError if incompatible types 
-    void Compiler::checkOperandTypes( string OP, Type type1, Type type2 )
+    Type Compiler::checkOperandTypes( string OP, Type type1, Type type2 )
     {
         string op = lexer::to_upper( OP );
         // Error message
@@ -137,11 +138,13 @@ namespace basal
         {
             if( type1 != INT or type2 != INT )
                 throwCompileError( message );
+            return INT;
         }
         else if( op=="OR" or op=="OU" or op=="AND" or op=="ET" or op=="." ) // bin operands expected
         {
             if( type1 != BIN or type2 != BIN )
                 throwCompileError( message );
+            return BIN;
         }
         else if( op=="+" or op=="=")
         {
@@ -149,7 +152,9 @@ namespace basal
             {
                 throwCompileError( message );
             }
+            return type1;
         }
+        return UNDECLARED;
     }
 
     // Call throwCompileError if incompatible type
@@ -457,8 +462,7 @@ namespace basal
             program << "    " << instr << " bx, ax" << endl;
             program << "    push ax" << endl;
 
-            checkOperandTypes( op, type1, type2 ); // doesn't account for relationnal operators
-            type1 = type2;
+            type1 = checkOperandTypes( op, type1, type2 ); // doesn't account for relationnal operators
         }
         
         return type1;
@@ -485,9 +489,9 @@ namespace basal
                 program << "    " << instr << " bx, ax" << endl;
             program << "    push ax" << endl;
             
-            checkOperandTypes( op, type1, type2 ); // doesn't account for relationnal operators
-            type1 = type2;
+            type1 = checkOperandTypes( op, type1, type2 ); // doesn't account for relationnal operators
         }
+
         
         return type1;
     }
@@ -510,7 +514,7 @@ namespace basal
             p = (uint16_t*) &h;
 
             cout << "Parsed: " << h << endl;
-            program << "    push " << *p << "   # push float " << h << endl;
+            program << "    push " << *p << "              # push float " << h << endl;
             cout << "Encoded: " << *p << endl;
             return FLOAT; 
         }
@@ -632,7 +636,7 @@ namespace basal
 
         currentScope->declareVar( var_name, varType );
 
-        program << "    push 0          # declaring var: " << var_name << endl;
+        program << "    push 0                  # declaring var: " << var_name << endl;
 
         if( tokens[j+1].type == EQU ) parseAssignement();
         else readToken(); // read identifier
@@ -1130,7 +1134,12 @@ namespace basal
         {
             readToken(); // read quotes
 
-            if( current.type == STRING )
+            if( current.type != STRING )
+            {
+                string mess = "Expected a string of character";
+                if( frenchEnabled ) mess = "Une chaine de charactere est attendu";
+                throwCompileError( mess );
+            }
 
             program << endl;
             program << "# displaying immediate string " << endl;
@@ -1145,7 +1154,7 @@ namespace basal
                     {
                         esc = false;
                         program << "    disp " << static_cast<uint16_t>( '\\' ) << " \t, char";
-                        program << "    # disp '\\'" << endl;
+                        program << "      # disp '\\'" << endl;
                         continue;
                     }
                     esc = not esc;     
@@ -1158,13 +1167,13 @@ namespace basal
                     {
                         if     ( c == 'n'  ) c = '\n';
                         program << "    disp " << static_cast<uint16_t>( c ) << " \t, char";
-                        program << "    # disp '\\" << current.text[i] << "'" << endl;
+                        program << "      # disp '\\" << current.text[i] << "'" << endl;
                         esc = false;
                     }
                     else
                     {
                         program << "    disp " << static_cast<uint16_t>( c ) << " \t, char";
-                        program << "    # disp '" << c << "'" << endl;
+                        program << "      # disp '" << c << "'" << endl;
                     }
                 }
 
@@ -1183,8 +1192,9 @@ namespace basal
         {
             Type type = parseExpression();
             string format = "";
-            if     ( type == BIN ) format = "bin";
-            else if( type == INT ) format = "int";
+            if     ( type == BIN )   format = "mem";
+            else if( type == INT )   format = "int";
+            else if( type == FLOAT ) format = "float";
 
             program << endl;
             program << "# displaying an expression" << endl;
