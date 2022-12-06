@@ -34,14 +34,15 @@ int main( int argc, char *argv[] )
     basal::Compiler compiler;
 
     string out = "out.basm";
-    if( argc > 3 ) // output
+    if( argc >= 4 ) // output
     {
+        cout  << " OK " << endl;
         string s{ argv[2] };
         if( s == "-o" )
-            out = argv[3];
-        string f{ argv[4] };
-        if( f == "-french" )
-            compiler.frenchEnabled = true;
+        {
+            string of = {argv[3]};
+            out = of;
+        }
     }
 
 
